@@ -1,0 +1,147 @@
+// -------------------------------
+//  DATABASE CONFIG
+// -------------------------------
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------
+//  USER MODEL (Admin + Employees)
+// -------------------------------
+model User {
+  id             String     @id @default(uuid())
+  name           String
+  employeeCode   String     @unique
+  hashedPasscode String // store hashed passcode
+  role           Role       @default(EMPLOYEE)
+  status         UserStatus @default(ACTIVE)
+  joinDate       DateTime   @default(now())
+
+  // Relations
+  attendance        Attendance[]
+  workLogs          WorkLog[]
+  noticesIssued     Notice[]          @relation("AdminIssuedNotices")
+  noticesReceived   Notice[]          @relation("UserNotices")
+  errorLogs         ErrorLog[]
+  projects          Project[]         @relation("UserProjects")
+  discussionPosts   DiscussionPost[]
+  discussionReplies DiscussionReply[]
+}
+
+// -------------------------------
+//  ENUMS
+// -------------------------------
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum NoticeType {
+  PUBLIC
+  PRIVATE
+  WARNING
+}
+
+// -------------------------------
+//  ATTENDANCE MODEL
+// -------------------------------
+model Attendance {
+  id       String    @id @default(uuid())
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  checkIn  DateTime
+  checkOut DateTime?
+}
+
+// -------------------------------
+//  WORK LOG MODEL
+// -------------------------------
+model WorkLog {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  date        DateTime @default(now())
+  description String
+  metadata    Json?
+}
+
+// -------------------------------
+//  NOTICE MODEL (Admin → Employee)
+// -------------------------------
+model Notice {
+  id       String @id @default(uuid())
+  issuedBy User   @relation("AdminIssuedNotices", fields: [adminId], references: [id], onDelete: Cascade)
+  adminId  String
+
+  targetUserId String? // null = public notice
+  targetUser   User?   @relation("UserNotices", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  type      NoticeType @default(PUBLIC)
+  title     String
+  message   String
+  createdAt DateTime   @default(now())
+}
+
+// -------------------------------
+//  ERROR LOG MODEL
+// -------------------------------
+model ErrorLog {
+  id         String   @id @default(uuid())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId     String?
+  route      String
+  message    String
+  stacktrace String?
+  metadata   Json?
+  timestamp  DateTime @default(now())
+}
+
+// -------------------------------
+//  PROJECT MODEL (For /api/admin/allprojects)
+// -------------------------------
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  // Assigned employees
+  users User[] @relation("UserProjects")
+}
+
+// -------------------------------
+//  DISCUSSION MODELS
+// -------------------------------
+model DiscussionPost {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  replies DiscussionReply[]
+}
+
+model DiscussionReply {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  post   DiscussionPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+}
