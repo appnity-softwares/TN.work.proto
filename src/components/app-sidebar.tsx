@@ -23,6 +23,7 @@ import { SessionUser } from "@/lib/types";
 import { logout } from "@/app/api/auth-actions";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { placeholderImages } from "@/lib/placeholder-images";
+
 import { DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
@@ -44,6 +45,11 @@ export function AppSidebar({ user }: { user: SessionUser }) {
   const navItems = user.role === "ADMIN" ? adminNavItems : employeeNavItems;
   const userAvatar = placeholderImages.find((p) => p.id === "user-avatar");
 
+  const isRouteActive = (href: string) => {
+    // Important: This makes `/admin/employees/[id]` highlight `Employees`
+    return pathname === href || pathname.startsWith(href + "/");
+  };
+
   const navContent = (
     <div className="flex flex-col h-full bg-muted/40">
       <div className="flex items-center justify-center h-20 border-b">
@@ -51,14 +57,16 @@ export function AppSidebar({ user }: { user: SessionUser }) {
           <Logo />
         </Link>
       </div>
+
+      {/* NAVIGATION */}
       <nav className="flex-1 overflow-y-auto px-4 py-4">
         <div className="grid items-start gap-2">
           {navItems.map((item) => (
             <Link key={item.label} href={item.href}>
               <Button
-                variant={pathname.startsWith(item.href) ? "default" : "ghost"}
+                variant={isRouteActive(item.href) ? "default" : "ghost"}
                 className="w-full justify-start"
-                aria-current={pathname.startsWith(item.href) ? "page" : undefined}
+                aria-current={isRouteActive(item.href) ? "page" : undefined}
               >
                 <item.icon className="mr-2 h-4 w-4" />
                 {item.label}
@@ -68,6 +76,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
         </div>
       </nav>
 
+      {/* USER FOOTER */}
       <div className="mt-auto border-t p-4">
         <div className="flex items-center gap-3 mb-4">
           <Avatar>
@@ -97,7 +106,9 @@ export function AppSidebar({ user }: { user: SessionUser }) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block w-64 border-r">{navContent}</div>
+      <div className="hidden lg:block w-64 border-r">
+        {navContent}
+      </div>
 
       {/* Mobile Sidebar */}
       <div className="lg:hidden">
@@ -110,7 +121,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
           </SheetTrigger>
 
           <SheetContent side="left" className="p-0 w-64">
-            {/* Hidden Title (Fixes Radix accessibility warning) */}
+            {/* Fix Radix Accessibility Warning */}
             <VisuallyHidden>
               <DialogTitle>Mobile Navigation Menu</DialogTitle>
             </VisuallyHidden>

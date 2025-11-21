@@ -9,5 +9,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     redirect("/dashboard");
   }
 
-  return <>{children}</>;
+  return (
+    <div className="min-h-screen w-full">
+      {children}
+    </div>
+  );
 }

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, LogIn, LogOut, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatISTTime } from "@/lib/time";
 
 async function getAuthToken() {
   const res = await fetch("/api/auth/session");
@@ -21,16 +22,13 @@ export function ClockWidget() {
 
   const { toast } = useToast();
 
-  // Load current attendance status + today's hours
   useEffect(() => {
     async function loadStatus() {
       try {
-        // 🔹 Fetch attendance status
         const statusRes = await fetch("/api/attendance/status");
         const statusData = await statusRes.json();
         setStatus(statusData.status);
 
-        // 🔹 Fetch today's work hours
         const hrsRes = await fetch("/api/attendance/today");
         const hrsData = await hrsRes.json();
         setTodayHours(hrsData.hours);
@@ -40,14 +38,13 @@ export function ClockWidget() {
     }
 
     loadStatus();
-
-    // Live update every 1 min if clocked in
     const t = setInterval(loadStatus, 60000);
     return () => clearInterval(t);
   }, []);
 
   const handleClockAction = async (type: "checkin" | "checkout") => {
     setIsLoading(true);
+
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -76,7 +73,6 @@ export function ClockWidget() {
       setStatus(result.status === "checked_in" ? "in" : "out");
       setLastActionTime(now);
 
-      // Refresh today’s hours
       const hrsRes = await fetch("/api/attendance/today");
       const hrsData = await hrsRes.json();
       setTodayHours(hrsData.hours);
@@ -85,14 +81,14 @@ export function ClockWidget() {
         title: type === "checkin" ? "Clocked In" : "Clocked Out",
         description: `You ${
           type === "checkin" ? "clocked in" : "clocked out"
-        } at ${now.toLocaleTimeString()}.`,
+        } at ${formatISTTime(now)}.`,
       });
+
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description:
-          error instanceof Error ? error.message : "An unknown error occurred.",
+        description: error instanceof Error ? error.message : "An unknown error occurred.",
       });
     } finally {
       setIsLoading(false);
@@ -116,11 +112,7 @@ export function ClockWidget() {
             onClick={() => handleClockAction("checkin")}
             disabled={isLoading}
           >
-            {isLoading ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <LogIn className="mr-2 h-4 w-4" />
-            )}
+            {isLoading ? <Loader2 className="animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
             Clock In
           </Button>
         ) : (
@@ -131,20 +123,14 @@ export function ClockWidget() {
             onClick={() => handleClockAction("checkout")}
             disabled={isLoading}
           >
-            {isLoading ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <LogOut className="mr-2 h-4 w-4" />
-            )}
+            {isLoading ? <Loader2 className="animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
             Clock Out
           </Button>
         )}
 
         <div className="text-center space-y-1">
           <p className="text-sm text-muted-foreground">
-            {status === "in"
-              ? "You are currently clocked in."
-              : "You are currently clocked out."}
+            {status === "in" ? "You are currently clocked in." : "You are currently clocked out."}
           </p>
 
           <p className="text-sm text-muted-foreground">
@@ -153,7 +139,7 @@ export function ClockWidget() {
 
           {lastActionTime && (
             <p className="text-xs text-muted-foreground">
-              Last action: {lastActionTime.toLocaleTimeString()}
+              Last action: {formatISTTime(lastActionTime)}
             </p>
           )}
         </div>
