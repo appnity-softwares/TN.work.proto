@@ -1,5 +1,6 @@
 import prisma from "./db";
 import type { User, Notice, WorkLog, ErrorLog, DiscussionPost } from "./types";
+import { formatISTDateTime } from "./time";
 
 export async function getUsers(): Promise<User[]> {
     return prisma.user.findMany({
@@ -22,11 +23,12 @@ export async function getAttendance(): Promise<any[]> {
         include: { user: true },
         orderBy: { checkIn: 'desc' }
     });
+
     return attendanceRecords.map(r => ({
         id: r.id,
         employeeName: r.user.name,
-        clockIn: r.checkIn,
-        clockOut: r.checkOut,
+        clockIn: formatISTDateTime(r.checkIn),
+        clockOut: r.checkOut ? formatISTDateTime(r.checkOut) : "—",
     }));
 }
 
