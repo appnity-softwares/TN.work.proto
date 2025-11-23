@@ -42,7 +42,8 @@ export default async function LoginPage() {
           </CardContent>
         </Card>
          <p className="px-8 text-center text-sm text-muted-foreground mt-4 bg-background/50 backdrop-blur-sm rounded-md p-2">
-            For testing, you can run `npx prisma studio` to add users.
+            An Appnity Softwares Pvt. Ltd. Product
+
           </p>
       </div>
     </main>

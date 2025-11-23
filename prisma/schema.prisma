@@ -11,29 +11,6 @@ datasource db {
 }
 
 // -------------------------------
-//  USER MODEL (Admin + Employees)
-// -------------------------------
-model User {
-  id             String     @id @default(uuid())
-  name           String
-  employeeCode   String     @unique
-  hashedPasscode String // store hashed passcode
-  role           Role       @default(EMPLOYEE)
-  status         UserStatus @default(ACTIVE)
-  joinDate       DateTime   @default(now())
-
-  // Relations
-  attendance        Attendance[]
-  workLogs          WorkLog[]
-  noticesIssued     Notice[]          @relation("AdminIssuedNotices")
-  noticesReceived   Notice[]          @relation("UserNotices")
-  errorLogs         ErrorLog[]
-  projects          Project[]         @relation("UserProjects")
-  discussionPosts   DiscussionPost[]
-  discussionReplies DiscussionReply[]
-}
-
-// -------------------------------
 //  ENUMS
 // -------------------------------
 enum Role {
@@ -51,6 +28,46 @@ enum NoticeType {
   PUBLIC
   PRIVATE
   WARNING
+}
+
+enum ClientStatus {
+  ACTIVE
+  ON_HOLD
+  CLOSED
+}
+
+enum ClientLogStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CANCELLED
+}
+
+// -------------------------------
+//  USER MODEL (Admin + Employees)
+// -------------------------------
+model User {
+  id             String     @id @default(uuid())
+  name           String
+  employeeCode   String     @unique
+  hashedPasscode String
+  role           Role       @default(EMPLOYEE)
+  status         UserStatus @default(ACTIVE)
+  joinDate       DateTime   @default(now())
+
+  // Relations
+  attendance        Attendance[]
+  workLogs          WorkLog[]
+  noticesIssued     Notice[]          @relation("AdminIssuedNotices")
+  noticesReceived   Notice[]          @relation("UserNotices")
+  errorLogs         ErrorLog[]
+  projects          Project[]         @relation("UserProjects")
+  discussionPosts   DiscussionPost[]
+  discussionReplies DiscussionReply[]
+
+  // Client relations
+  clientAssignments ClientEmployee[]
+  createdClientLogs ClientLog[]        @relation("UserClientLogs")
 }
 
 // -------------------------------
@@ -81,6 +98,7 @@ model WorkLog {
 // -------------------------------
 model Notice {
   id       String @id @default(uuid())
+
   issuedBy User   @relation("AdminIssuedNotices", fields: [adminId], references: [id], onDelete: Cascade)
   adminId  String
 
@@ -116,8 +134,14 @@ model Project {
   description String?
   createdAt   DateTime @default(now())
 
-  // Assigned employees
+  // Assigned employees (optional)
   users User[] @relation("UserProjects")
+
+  // Linked clients
+  clientLinks ClientProject[]
+
+  // Optional: if you previously used client log files
+  clientLogFiles ClientLogFile[]
 }
 
 // -------------------------------
@@ -129,8 +153,9 @@ model DiscussionPost {
   content   String
   createdAt DateTime @default(now())
 
-  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId  String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
   replies DiscussionReply[]
 }
 
@@ -144,4 +169,111 @@ model DiscussionReply {
 
   post   DiscussionPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId String
+}
+
+// -------------------------------
+//  CLIENT MODEL
+// -------------------------------
+model Client {
+  id           String        @id @default(uuid())
+  name         String
+  companyName  String?
+  contactEmail String?
+  contactPhone String?
+  funds        Float?
+  objective    String?
+  notes        String?
+  status       ClientStatus  @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  employees ClientEmployee[]
+  projects  ClientProject[]
+  logs      ClientLog[]
+  audits    ClientAudit[]
+}
+
+// -------------------------------
+//  CLIENT LOG MODEL
+// -------------------------------
+model ClientLog {
+  id          String          @id @default(uuid())
+  client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId    String
+
+  createdBy   User?           @relation("UserClientLogs", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  objective   String?
+  demand      String?
+  request     String?
+  response    String?
+  amount      Float?
+  attachments Json?           // generic attachments field (e.g., array of urls/metadata)
+  status      ClientLogStatus @default(OPEN)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  files ClientLogFile[]        // file entries (Cloudinary etc.)
+}
+
+// -------------------------------
+//  CLIENT LOG FILES (Cloudinary uploads)
+// -------------------------------
+model ClientLogFile {
+  id           String   @id @default(uuid())
+
+  log          ClientLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  logId        String
+
+  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId    String?
+
+  fileUrl      String
+  cloudinaryId String?
+  fileName     String
+  fileType     String
+  createdAt    DateTime @default(now())
+}
+
+// -------------------------------
+//  CLIENT AUDIT MODEL
+// -------------------------------
+model ClientAudit {
+  id        String   @id @default(uuid())
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId  String
+  action    String
+  changedBy String?
+  data      Json?
+  createdAt DateTime @default(now())
+}
+
+// -------------------------------
+//  CLIENT <-> EMPLOYEE RELATION
+// -------------------------------
+model ClientEmployee {
+  id        String @id @default(uuid())
+  client    Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId  String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, userId])
+}
+
+// -------------------------------
+//  CLIENT <-> PROJECT RELATION
+// -------------------------------
+model ClientProject {
+  id        String   @id @default(uuid())
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId  String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, projectId])
 }
