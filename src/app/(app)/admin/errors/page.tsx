@@ -41,10 +41,13 @@ export default async function ErrorLogPage() {
                   <TableRow key={log.id}>
                     <TableCell>{format(new Date(log.timestamp), "Pp")}</TableCell>
                     <TableCell>
-                      <Badge variant={log.type === "API" ? "destructive" : "secondary"}>
-                        {log.type}
-                      </Badge>
-                    </TableCell>
+  <Badge
+    variant={log.route.startsWith("/api") ? "destructive" : "secondary"}
+  >
+    {log.route.startsWith("/api") ? "API" : "APP"}
+  </Badge>
+</TableCell>
+
                     <TableCell className="font-mono text-sm">{log.message}</TableCell>
                   </TableRow>
                 ))}

@@ -5,7 +5,7 @@ async function getAudit(clientId: string) {
   const cookieStore = cookies(); // ✅ sync, correct
 
   const res = await fetch(
-    `http://localhost:3000/api/admin/clients/${clientId}/audit`,
+    `/api/admin/clients/${clientId}/audit`,
     {
       cache: "no-store",
       headers: {

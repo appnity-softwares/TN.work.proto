@@ -3,22 +3,26 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import ClientCreateForm from "@/components/admin/client-create-form";
 
+/* ---------------- COOKIE HEADER ---------------- */
 async function getFormData() {
   const cookieStore = await cookies();
 
-  // ✅ FIX: Proper cookie header
-  const cookieHeader = Array.from(cookieStore.getAll())
+  const cookieHeader = cookieStore
+    .getAll()
     .map(({ name, value }) => `${name}=${value}`)
     .join("; ");
 
+  // 🔥 USE RELATIVE PATH (INTERNAL API)
   const [usersRes, projectsRes] = await Promise.all([
-    fetch("http://localhost:3000/api/employees", {
+    fetch("/api/employees", {
       headers: { Cookie: cookieHeader },
       cache: "no-store",
+      next: { revalidate: 0 }, // optional: ensures fresh SSR
     }),
-    fetch("http://localhost:3000/api/allprojects", {
+    fetch("/api/allprojects", {
       headers: { Cookie: cookieHeader },
       cache: "no-store",
+      next: { revalidate: 0 },
     }),
   ]);
 
@@ -35,6 +39,7 @@ async function getFormData() {
   };
 }
 
+/* ---------------- PAGE ---------------- */
 export default async function NewClientPage() {
   const { users, projects } = await getFormData();
 
@@ -44,6 +49,8 @@ export default async function NewClientPage() {
         title="Create Client"
         description="Add new client and assign employees & projects"
       />
+
+      {/* pass fetched data */}
       <ClientCreateForm users={users} projects={projects} />
     </div>
   );

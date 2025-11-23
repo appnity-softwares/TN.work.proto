@@ -6,7 +6,7 @@ async function getClient(id: string) {
   const cookieStore = cookies(); // ❌ no await
 
   const res = await fetch(
-    `http://localhost:3000/api/admin/clients/${id}`,
+    `/api/admin/clients/${id}`,
     {
       cache: "no-store",
       headers: { Cookie: cookieStore.toString() },

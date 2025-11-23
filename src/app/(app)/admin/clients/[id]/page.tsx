@@ -8,7 +8,7 @@ async function getClient(id: string) {
   const cookieStore = await cookies(); // ✅ FIX — add await
   const sessionCookie = cookieStore.get("tn_proto_session")?.value;
 
-  const res = await fetch(`http://localhost:3000/api/admin/clients/${id}`, {
+  const res = await fetch(`/api/admin/clients/${id}`, {
     cache: "no-store",
     headers: {
       Cookie: `tn_proto_session=${sessionCookie}`,
