@@ -1,44 +1,64 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cookies } from "next/headers";
 
-/* ---------------- UTIL: COOKIE SERIALIZER ---------------- */
-function serializeCookies(cookieList: { name: string; value: string }[]) {
-  return cookieList.map(({ name, value }) => `${name}=${value}`).join("; ");
-}
+// ---------- TYPE FIX ----------
+type ClientType = {
+  id: string;
+  name: string;
+  status: string;
+  _count?: {
+    employees?: number;
+    projects?: number;
+    logs?: number;
+  };
+};
 
-/* ---------------- FETCH CLIENTS ---------------- */
-async function getClients() {
-  // ✅ FIX: cookies() must be awaited
-  const cookieStore = await cookies();
+export default function ClientsPage() {
+  const [clients, setClients] = useState<ClientType[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // cookieStore.getAll() returns Cookie[]
-  const cookieHeader = serializeCookies(cookieStore.getAll());
+  const fetchClients = async () => {
+    try {
+      const res = await fetch("/api/admin/clients", {
+        cache: "no-store",
+      });
 
-  const res = await fetch("http://localhost:3000/api/admin/clients", {
-    cache: "no-store",
-    headers: {
-      Cookie: cookieHeader,
-    },
-  });
+      const text = await res.text();
 
-  if (!res.ok) {
-    throw new Error("Failed to load clients");
-  }
+      if (!text) {
+        console.error("❌ Empty response from /api/admin/clients");
+        return;
+      }
 
-  const data = await res.json();
-  return data.clients;
-}
+      const data = JSON.parse(text);
 
-/* ---------------- PAGE COMPONENT ---------------- */
-export default async function ClientsPage() {
-  const clients = await getClients();
+      if (!Array.isArray(data.clients)) {
+        console.error("❌ Invalid format:", data);
+        return;
+      }
+
+      setClients(data.clients);
+    } catch (err) {
+      console.error("Error fetching clients:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+    const interval = setInterval(fetchClients, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div>
-      <PageHeader title="Clients" description="Manage all client profiles" />
+    <div className="flex flex-col h-full">
+      <PageHeader title="Clients" description="Manage all client profiles." />
 
       <div className="flex justify-end gap-3 p-6 pt-0">
         <Link href="/admin/clients/new">
@@ -50,25 +70,33 @@ export default async function ClientsPage() {
         </Link>
       </div>
 
-      <div className="grid gap-4 p-6">
-        {clients.length === 0 && (
-          <p className="text-muted-foreground text-sm">No clients created yet.</p>
+      <div className="p-6">
+        {loading ? (
+          <p className="text-center text-muted-foreground py-10">
+            Loading clients...
+          </p>
+        ) : clients.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No clients created yet.
+          </p>
+        ) : (
+          <div className="grid gap-4">
+            {clients.map((client) => (
+              <Link key={client.id} href={`/admin/clients/${client.id}`}>
+                <Card className="hover:shadow-md transition">
+                  <CardContent className="p-4 space-y-2">
+                    <h3 className="text-lg font-semibold">{client.name}</h3>
+
+                    <p>Status: {client.status}</p>
+                    <p>Employees: {client._count?.employees ?? 0}</p>
+                    <p>Projects: {client._count?.projects ?? 0}</p>
+                    <p>Logs: {client._count?.logs ?? 0}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
         )}
-
-        {clients.map((client: any) => (
-          <Link key={client.id} href={`/admin/clients/${client.id}`}>
-            <Card className="hover:shadow-md transition">
-              <CardContent className="p-4 space-y-2">
-                <h3 className="text-lg font-semibold">{client.name}</h3>
-
-                <p>Status: {client.status}</p>
-                <p>Employees: {client._count?.employees ?? 0}</p>
-                <p>Projects: {client._count?.projects ?? 0}</p>
-                <p>Logs: {client._count?.logs ?? 0}</p>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
       </div>
     </div>
   );
