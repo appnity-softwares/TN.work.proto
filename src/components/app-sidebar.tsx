@@ -75,7 +75,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
     { href: "/admin/employees", icon: Users, label: "Employees" },
     { href: "/admin/clients", icon: Briefcase, label: "Clients", showCount: true },
     { href: "/admin/notices", icon: Bell, label: "Notices" },
-    { href: "/admin/errors", icon: AlertTriangle, label: "Error Logs" },
+    // { href: "/admin/errors", icon: AlertTriangle, label: "Error Logs" },
   ];
 
   const navItems = user.role === "ADMIN" ? adminNavItems : employeeNavItems;

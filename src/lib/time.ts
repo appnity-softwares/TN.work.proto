@@ -1,5 +1,8 @@
 export function formatISTTime(date: string | Date, withSeconds = false) {
-  return new Date(date).toLocaleTimeString("en-IN", {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "—";
+
+  return d.toLocaleTimeString("en-IN", {
     timeZone: "Asia/Kolkata",
     hour: "2-digit",
     minute: "2-digit",
@@ -9,7 +12,10 @@ export function formatISTTime(date: string | Date, withSeconds = false) {
 }
 
 export function formatISTDateTime(date: string | Date) {
-  return new Date(date).toLocaleString("en-IN", {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "—";
+
+  return d.toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
     day: "2-digit",
     month: "short",

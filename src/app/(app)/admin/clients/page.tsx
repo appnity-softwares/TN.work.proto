@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-// ---------- TYPE FIX ----------
 type ClientType = {
   id: string;
   name: string;
@@ -18,9 +18,18 @@ type ClientType = {
   };
 };
 
+const statusStyles: Record<string, string> = {
+  ACTIVE: "bg-green-50 text-green-700 border border-green-200",
+  ON_HOLD: "bg-yellow-50 text-yellow-700 border border-yellow-200",
+  IN_PROGRESS: "bg-blue-50 text-blue-700 border border-blue-200",
+  COMPLETED: "bg-purple-50 text-purple-700 border border-purple-200",
+  CANCELLED: "bg-red-50 text-red-700 border border-red-200",
+};
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientType[]>([]);
   const [loading, setLoading] = useState(true);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchClients = async () => {
     try {
@@ -28,17 +37,10 @@ export default function ClientsPage() {
         cache: "no-store",
       });
 
-      const text = await res.text();
+      const data = await res.json();
 
-      if (!text) {
-        console.error("❌ Empty response from /api/admin/clients");
-        return;
-      }
-
-      const data = JSON.parse(text);
-
-      if (!Array.isArray(data.clients)) {
-        console.error("❌ Invalid format:", data);
+      if (!data?.clients || !Array.isArray(data.clients)) {
+        console.error("Invalid response:", data);
         return;
       }
 
@@ -52,45 +54,102 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchClients();
-    const interval = setInterval(fetchClients, 10000);
-    return () => clearInterval(interval);
+
+    if (!intervalRef.current) {
+      intervalRef.current = setInterval(fetchClients, 15000);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, []);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="min-h-screen bg-gray-50">
       <PageHeader title="Clients" description="Manage all client profiles." />
 
-      <div className="flex justify-end gap-3 p-6 pt-0">
+      {/* ACTION BAR */}
+      <div className="flex justify-end gap-3 px-6 pt-0 pb-4">
         <Link href="/admin/clients/new">
           <Button>Create Client</Button>
         </Link>
 
         <Link href="/api/admin/clients/export-all" target="_blank">
-          <Button variant="outline">Export All PDF</Button>
+          <Button variant="outline">Export PDF</Button>
         </Link>
       </div>
 
-      <div className="p-6">
+      {/* CONTENT */}
+      <div className="px-6 pb-6">
         {loading ? (
-          <p className="text-center text-muted-foreground py-10">
+          <div className="text-center py-10 text-muted-foreground">
             Loading clients...
-          </p>
+          </div>
         ) : clients.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
+          <div className="text-center py-10 text-muted-foreground">
             No clients created yet.
-          </p>
+          </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {clients.map((client) => (
-              <Link key={client.id} href={`/admin/clients/${client.id}`}>
-                <Card className="hover:shadow-md transition">
-                  <CardContent className="p-4 space-y-2">
-                    <h3 className="text-lg font-semibold">{client.name}</h3>
+              <Link
+                key={client.id}
+                href={`/admin/clients/${client.id}`}
+                className="block group"
+              >
+                <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition rounded-xl group-hover:border-gray-300">
+                  <CardContent className="p-5 space-y-4">
 
-                    <p>Status: {client.status}</p>
-                    <p>Employees: {client._count?.employees ?? 0}</p>
-                    <p>Projects: {client._count?.projects ?? 0}</p>
-                    <p>Logs: {client._count?.logs ?? 0}</p>
+                    {/* HEADER */}
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {client.name}
+                      </h3>
+
+                      <Badge
+                        className={`text-xs font-medium ${
+                          statusStyles[client.status] ||
+                          "bg-gray-100 text-gray-700 border"
+                        }`}
+                      >
+                        {client.status}
+                      </Badge>
+                    </div>
+
+                    {/* STATS */}
+                    <div className="grid grid-cols-3 gap-2 text-sm text-gray-600 pt-2">
+                      <div className="text-center">
+                        <p className="font-semibold text-gray-900">
+                          {client._count?.employees ?? 0}
+                        </p>
+                        <p className="text-xs">Employees</p>
+                      </div>
+
+                      <div className="text-center">
+                        <p className="font-semibold text-gray-900">
+                          {client._count?.projects ?? 0}
+                        </p>
+                        <p className="text-xs">Projects</p>
+                      </div>
+
+                      <div className="text-center">
+                        <p className="font-semibold text-gray-900">
+                          {client._count?.logs ?? 0}
+                        </p>
+                        <p className="text-xs">Logs</p>
+                      </div>
+                    </div>
+
+                    {/* FOOTER */}
+                    <div className="pt-2">
+                      <p className="text-xs text-right text-gray-500 group-hover:text-gray-700 transition">
+                        Click to open →
+                      </p>
+                    </div>
+
                   </CardContent>
                 </Card>
               </Link>

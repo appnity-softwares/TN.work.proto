@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -11,6 +16,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  FileText,
+  Users,
+  FolderKanban,
+  CircleDollarSign,
+} from "lucide-react";
+import { getBaseUrl } from "@/lib/getBaseUrl";
+
+/* ---------------- BASE URL ---------------- */
+const BASE_URL = getBaseUrl();
 
 /* ---------------- STATUS OPTIONS ---------------- */
 const STATUS_OPTIONS = [
@@ -21,90 +38,118 @@ const STATUS_OPTIONS = [
   "CANCELLED",
 ];
 
+const STATUS_COLORS: Record<string, string> = {
+  ACTIVE: "bg-green-100 text-green-700 border border-green-200",
+  ON_HOLD: "bg-yellow-100 text-yellow-700 border border-yellow-200",
+  IN_PROGRESS: "bg-blue-100 text-blue-700 border border-blue-200",
+  COMPLETED: "bg-purple-100 text-purple-700 border border-purple-200",
+  CANCELLED: "bg-red-100 text-red-700 border border-red-200",
+};
+
+const getStatusClass = (status: string) =>
+  STATUS_COLORS[status] || "bg-gray-100 text-gray-700 border";
+
+/* ============================================================
+   MAIN COMPONENT
+============================================================ */
 export default function ClientProfile({ client }: { client: any }) {
-  const [file, setFile] = useState<File | null>(null);
+  if (!client) {
+    return (
+      <div className="p-6 text-center text-muted-foreground">
+        No client data available.
+      </div>
+    );
+  }
+
+  /* ---------------- STATES ---------------- */
   const [status, setStatus] = useState(client.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  // ------------------------------
-  // LOG FORM STATE
-  // ------------------------------
   const [form, setForm] = useState({
     objective: "",
-    demand: "",
     request: "",
     response: "",
     amount: "",
   });
 
-  // ------------------------------
-  // ASSIGNMENT STATE
-  // ------------------------------
+  const [file, setFile] = useState<File | null>(null);
+
   const [employees, setEmployees] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [savingAssignments, setSavingAssignments] = useState(false);
 
-  /* ---------------- Load employees + projects ---------------- */
+  const [empSearch, setEmpSearch] = useState("");
+  const [projSearch, setProjSearch] = useState("");
+
+  const clientEmployees = client.employees || [];
+  const clientProjects = client.projects || [];
+  const clientLogs = client.logs || [];
+
+  /* ---------------- INITIAL LOAD ---------------- */
   useEffect(() => {
     loadOptions();
 
-    const empIds = client.employees.map((e: any) => e.userId);
-    const projIds = client.projects.map((p: any) => p.projectId);
-
-    setSelectedEmployees(empIds);
-    setSelectedProjects(projIds);
+    setSelectedEmployees(clientEmployees.map((e: any) => e.userId));
+    setSelectedProjects(clientProjects.map((p: any) => p.projectId));
   }, []);
 
+  /* ---------------- FETCH EMPLOYEES + PROJECTS ---------------- */
   async function loadOptions() {
-    const [empRes, projRes] = await Promise.all([
-      fetch("/api/employees"),
-      fetch("/api/allprojects"),
-    ]);
+    try {
+      const [empRes, projRes] = await Promise.all([
+        fetch(`${BASE_URL}/api/employees`),
+        fetch(`${BASE_URL}/api/allprojects`),
+      ]);
 
-    const empData = await empRes.json();
-    const projectData = await projRes.json();
+      const empData = await empRes.json();
+      const projectData = await projRes.json();
 
-    setEmployees(empData.employees);
-    setProjects(projectData.projects);
+      setEmployees(empData.employees || []);
+      setProjects(projectData.projects || []);
+    } catch (err) {
+      console.error("❌ Failed loading options:", err);
+    }
   }
 
-  /* ---------------- UPDATE CLIENT STATUS ---------------- */
+  /* ---------------- STATUS UPDATE ---------------- */
   async function updateStatus() {
     setUpdatingStatus(true);
 
-    const res = await fetch(`/api/admin/clients/${client.id}`, {
+    const res = await fetch(`${BASE_URL}/api/admin/clients/${client.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
 
-    if (!res.ok) {
-      alert("Failed to update status");
-    } else {
-      alert("Client status updated ✅");
+    if (!res.ok) alert("Failed to update status");
+    else {
+      alert("Status updated successfully ✅");
+      window.location.reload();
     }
 
     setUpdatingStatus(false);
   }
 
-  /* ---------------- ASSIGN SUBMIT ---------------- */
+  /* ---------------- SAVE ASSIGNMENTS ---------------- */
   async function saveAssignments() {
     setSavingAssignments(true);
 
-    const res = await fetch(`/api/admin/clients/${client.id}/assign`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        employeeIds: selectedEmployees,
-        projectIds: selectedProjects,
-      }),
-    });
+    const res = await fetch(
+      `${BASE_URL}/api/admin/clients/${client.id}/assign`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeIds: selectedEmployees,
+          projectIds: selectedProjects,
+        }),
+      }
+    );
 
-    if (!res.ok) {
-      alert("Failed to update assignments");
-    } else {
+    if (!res.ok) alert("Failed to update assignments ❌");
+    else {
       alert("Assignments updated successfully ✅");
       window.location.reload();
     }
@@ -112,234 +157,284 @@ export default function ClientProfile({ client }: { client: any }) {
     setSavingAssignments(false);
   }
 
-  /* ---------------- LOG SUBMIT ---------------- */
+  /* ---------------- SUBMIT LOG ---------------- */
   async function submitLog() {
     const fd = new FormData();
 
-    Object.entries(form).forEach(([key, value]) => fd.append(key, value));
+    fd.append("objective", form.objective);
+    fd.append("request", form.request);
+    fd.append("response", form.response);
+    fd.append("amount", form.amount);
 
     if (file) fd.append("file", file);
 
-    const res = await fetch(`/api/admin/clients/${client.id}/logs`, {
+    const res = await fetch(`${BASE_URL}/api/admin/clients/${client.id}/logs`, {
       method: "POST",
       body: fd,
     });
 
-    if (!res.ok) {
-      alert("Failed to add log");
-      return;
+    if (!res.ok) alert("Failed to add log ❌");
+    else {
+      alert("Log added successfully ✅");
+      window.location.reload();
     }
-
-    alert("Log added successfully ✅");
-    window.location.reload();
   }
 
-  /* ---------------- Toggle functions ---------------- */
-  function toggleEmployee(id: string) {
+  /* ---------------- TOGGLE SELECTS ---------------- */
+  const toggleEmployee = (id: string) =>
     setSelectedEmployees((prev) =>
       prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
     );
-  }
 
-  function toggleProject(id: string) {
+  const toggleProject = (id: string) =>
     setSelectedProjects((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
-  }
 
-  const exportPDF = () => {
-    window.open(`/api/admin/clients/${client.id}/export`, "_blank");
-  };
+  /* ---------------- EXPORT PDF ---------------- */
+  const exportPDF = () =>
+    window.open(`${BASE_URL}/api/admin/clients/${client.id}/export`, "_blank");
 
-  /* ---------------- UI ---------------- */
+  /* ---------------- FILTERS ---------------- */
+  const filteredEmployees = employees.filter((e) =>
+    e.name?.toLowerCase().includes(empSearch.toLowerCase())
+  );
+
+  const filteredProjects = projects.filter((p) =>
+    p.name?.toLowerCase().includes(projSearch.toLowerCase())
+  );
+
+  /* ---------------- TOTAL AMOUNT ---------------- */
+  const totalAmount = clientLogs.reduce(
+    (sum: number, log: any) => sum + (Number(log.amount) || 0),
+    0
+  );
+
+  /* ============================================================
+     UI / RENDER
+  ============================================================ */
   return (
-    <div className="p-6 space-y-10">
+    <div className="p-6 space-y-8">
 
-      {/* ---------------- CLIENT NAME + STATUS ---------------- */}
+      {/* ---------------- HEADER ---------------- */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-xl font-bold flex items-center gap-3">
-            {client.name}
-            <span className="text-sm px-3 py-1 rounded bg-muted text-muted-foreground">
-              {client.status}
-            </span>
-          </CardTitle>
+        <CardHeader className="flex justify-between items-center flex-wrap gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-3 text-xl">
+              {client.name}
+              <Badge className={getStatusClass(client.status)}>
+                {client.status}
+              </Badge>
+            </CardTitle>
+
+            <p className="text-muted-foreground text-sm">
+              {client.companyName || "No company"}
+            </p>
+          </div>
+
+          <Button onClick={exportPDF} variant="outline">
+            <FileText className="w-4 h-4 mr-2" />
+            Download Profile PDF
+          </Button>
         </CardHeader>
       </Card>
 
-      {/* ACTION BUTTONS */}
-      <div className="flex gap-4">
-        <Button onClick={exportPDF}>Download Client Profile PDF</Button>
-        <a href={`/admin/clients/${client.id}/edit`}>
-          <Button variant="secondary">Edit Client</Button>
-        </a>
+      {/* ---------------- SUMMARY CARDS ---------------- */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <SummaryCard icon={<Users size={16} />} label="Employees" value={clientEmployees.length} />
+        <SummaryCard icon={<FolderKanban size={16} />} label="Projects" value={clientProjects.length} />
+        <SummaryCard icon={<FileText size={16} />} label="Logs" value={clientLogs.length} />
+        <SummaryCard icon={<CircleDollarSign size={16} />} label="Total Amount" value={`₹ ${totalAmount}`} />
       </div>
 
-      {/* ------------------ CLIENT STATUS ------------------ */}
+      {/* ---------------- STATUS UPDATE ---------------- */}
       <Card>
         <CardHeader>
-          <CardTitle>Client Status</CardTitle>
+          <CardTitle>Update Status</CardTitle>
         </CardHeader>
-
-        <CardContent className="space-y-4 max-w-md">
-          <p className="text-sm text-muted-foreground">
-            Current Status: <strong>{client.status}</strong>
-          </p>
-
+        <CardContent className="flex items-center gap-4">
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {STATUS_OPTIONS.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status}
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Button
-            onClick={updateStatus}
-            disabled={updatingStatus}
-            className="w-full"
-          >
-            {updatingStatus ? "Updating..." : "Update Status"}
+          <Button onClick={updateStatus} disabled={updatingStatus}>
+            {updatingStatus ? "Updating..." : "Update"}
           </Button>
         </CardContent>
       </Card>
 
-      {/* ------------------ ASSIGNMENT SECTION ------------------ */}
+      {/* ---------------- ASSIGN SECTIONS ---------------- */}
       <Card>
         <CardHeader>
           <CardTitle>Assign Employees & Projects</CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-
-          {/* EMPLOYEES */}
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Employees */}
           <div>
-            <h3 className="font-semibold mb-2">Employees</h3>
+            <h3 className="font-medium mb-2">Employees</h3>
+            <Input
+              placeholder="Search employees..."
+              value={empSearch}
+              onChange={(e) => setEmpSearch(e.target.value)}
+              className="mb-3"
+            />
 
-            {employees.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No employees found.</p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {employees.map((emp) => (
-                  <label key={emp.id} className="flex items-center gap-2">
-                    <Checkbox
-                      checked={selectedEmployees.includes(emp.id)}
-                      onCheckedChange={() => toggleEmployee(emp.id)}
-                    />
-                    <span>{emp.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+            <div className="max-h-56 overflow-y-auto border rounded p-3 space-y-2">
+              {filteredEmployees.map((emp) => (
+                <label
+                  key={emp.id}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Checkbox
+                    checked={selectedEmployees.includes(emp.id)}
+                    onCheckedChange={() => toggleEmployee(emp.id)}
+                  />
+                  {emp.name}
+                </label>
+              ))}
+            </div>
           </div>
 
-          {/* PROJECTS */}
+          {/* Projects */}
           <div>
-            <h3 className="font-semibold mb-2">Projects</h3>
+            <h3 className="font-medium mb-2">Projects</h3>
+            <Input
+              placeholder="Search projects..."
+              value={projSearch}
+              onChange={(e) => setProjSearch(e.target.value)}
+              className="mb-3"
+            />
 
-            {projects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No projects found.</p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {projects.map((proj) => (
-                  <label key={proj.id} className="flex items-center gap-2">
-                    <Checkbox
-                      checked={selectedProjects.includes(proj.id)}
-                      onCheckedChange={() => toggleProject(proj.id)}
-                    />
-                    <span>{proj.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+            <div className="max-h-56 overflow-y-auto border rounded p-3 space-y-2">
+              {filteredProjects.map((proj) => (
+                <label
+                  key={proj.id}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Checkbox
+                    checked={selectedProjects.includes(proj.id)}
+                    onCheckedChange={() => toggleProject(proj.id)}
+                  />
+                  {proj.name}
+                </label>
+              ))}
+            </div>
           </div>
+        </CardContent>
 
-          <Button disabled={savingAssignments} onClick={saveAssignments}>
+        <CardContent>
+          <Button onClick={saveAssignments} disabled={savingAssignments}>
             {savingAssignments ? "Saving..." : "Save Assignments"}
           </Button>
         </CardContent>
       </Card>
 
-      {/* ------------------ ADD LOG FORM ------------------ */}
+      {/* ---------------- ADD LOG SECTION ---------------- */}
       <Card>
         <CardHeader>
-          <CardTitle>Add Client Log</CardTitle>
+          <CardTitle>Add New Log</CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-3">
-          {["Objective", "Demand", "Request", "Response"].map((field, idx) => (
-            <input
-              key={idx}
-              placeholder={field}
-              className="border p-2 rounded w-full"
-              onChange={(e) =>
-                setForm({ ...form, [field.toLowerCase()]: e.target.value })
-              }
-            />
-          ))}
+        <CardContent className="space-y-4">
+          <Input
+            placeholder="Objective"
+            value={form.objective}
+            onChange={(e) => setForm({ ...form, objective: e.target.value })}
+          />
 
-          <input
-            placeholder="Amount"
+          <Input
+            placeholder="Client Request"
+            value={form.request}
+            onChange={(e) => setForm({ ...form, request: e.target.value })}
+          />
+
+          <Input
+            placeholder="Your Response"
+            value={form.response}
+            onChange={(e) => setForm({ ...form, response: e.target.value })}
+          />
+
+          <Input
             type="number"
-            className="border p-2 rounded w-full"
+            placeholder="Amount"
+            value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
           />
 
-          <input
+          <Input
             type="file"
-            className="border p-2 rounded w-full"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            accept=".pdf,.jpg,.png"
+            onChange={(e) =>
+              setFile(e.target.files ? e.target.files[0] : null)
+            }
           />
 
-          <Button onClick={submitLog}>Add Client Log</Button>
+          <Button onClick={submitLog}>Add Log</Button>
         </CardContent>
       </Card>
 
-      {/* ------------------ LOG HISTORY ------------------ */}
+      {/* ---------------- LOG LIST ---------------- */}
       <Card>
         <CardHeader>
-          <CardTitle>Client Logs</CardTitle>
+          <CardTitle>Activity Logs</CardTitle>
         </CardHeader>
 
-        <CardContent>
-          {client.logs.length === 0 ? (
-            <p>No logs added yet.</p>
+        <CardContent className="space-y-3">
+          {clientLogs.length === 0 ? (
+            <p className="text-muted-foreground">No logs yet.</p>
           ) : (
-            client.logs.map((log: any) => (
-              <div key={log.id} className="border rounded p-3 mb-4">
-
-                {/* CREATOR */}
-                {log.createdBy && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    <b>By:</b> {log.createdBy.name} ({log.createdBy.employeeCode})
-                  </p>
-                )}
+            clientLogs.map((log: any) => (
+              <div
+                key={log.id}
+                className="border rounded p-3 text-sm space-y-1"
+              >
+                <p>
+                  <b>{log.createdBy?.name}</b> —{" "}
+                  {new Date(log.createdAt).toLocaleString()}
+                </p>
 
                 <p><b>Objective:</b> {log.objective}</p>
-                <p><b>Demand:</b> {log.demand}</p>
                 <p><b>Request:</b> {log.request}</p>
                 <p><b>Response:</b> {log.response}</p>
-                <p><b>Amount:</b> INR{log.amount}</p>
-
-                {log.attachments?.file && (
-                  <a
-                    href={log.attachments.file}
-                    target="_blank"
-                    className="text-blue-600 underline"
-                  >
-                    View Attachment
-                  </a>
-                )}
+                <p><b>Amount:</b> ₹{log.amount}</p>
               </div>
             ))
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/* ============================================================
+   SUMMARY CARD
+============================================================ */
+function SummaryCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-md border px-4 py-3 text-sm">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <span className="font-semibold">{value}</span>
     </div>
   );
 }

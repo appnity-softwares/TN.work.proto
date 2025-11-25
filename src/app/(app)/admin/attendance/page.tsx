@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import {
   Table,
@@ -12,43 +13,73 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, LogIn, LogOut } from "lucide-react";
+import { Clock, LogIn, LogOut, CalendarIcon } from "lucide-react";
 import { format, isValid } from "date-fns";
+import AttendanceTimeline from "@/components/attendance-timeline";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
-// ✅ Safe date formatter
 function safeFormat(date: any) {
   const d = new Date(date);
   if (!date || !isValid(d)) return "—";
   return format(d, "hh:mm a");
 }
 
+// ✅ One employee → one latest record
+function getLatestAttendance(data: any[]) {
+  const map = new Map<string, any>();
+
+  data.forEach((log) => {
+    const key = log.employeeId || log.employeeName;
+    if (!key) return;
+
+    const existing = map.get(key);
+
+    if (
+      !existing ||
+      new Date(log.clockIn || 0).getTime() >
+        new Date(existing.clockIn || 0).getTime()
+    ) {
+      map.set(key, log);
+    }
+  });
+
+  return Array.from(map.values());
+}
+
 export default function AttendancePage() {
+  const router = useRouter();
+
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"today" | "date">("today");
+  const [view, setView] = useState<"table" | "timeline">("table");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  // ✅ Fetch admin attendance data
   const fetchAttendance = async () => {
     try {
-      const res = await fetch("/api/attendance/admin", {
-        cache: "no-store",
-      });
+      let url = "/api/admin/attendance/live";
 
-      const text = await res.text();
-
-      if (!text) {
-        console.error("Empty response from server");
-        return;
+      if (filter === "today") {
+        url += "?day=today";
+      } else if (filter === "date" && selectedDate) {
+        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        url += `?date=${dateStr}`;
       }
+
+      const res = await fetch(url, { cache: "no-store" });
+      const text = await res.text();
+      if (!text) return;
 
       const data = JSON.parse(text);
+      if (!Array.isArray(data)) return;
 
-      if (!Array.isArray(data)) {
-        console.error("Invalid attendance format:", data);
-        return;
-      }
-
-      setAttendance(data);
-
+      const uniqueData = getLatestAttendance(data);
+      setAttendance(uniqueData);
     } catch (err) {
       console.error("Error fetching attendance:", err);
     } finally {
@@ -56,34 +87,112 @@ export default function AttendancePage() {
     }
   };
 
-  // ✅ Initial load + live refresh every 10 seconds
   useEffect(() => {
     fetchAttendance();
-    const interval = setInterval(fetchAttendance, 10000); // every 10s
+    const interval = setInterval(fetchAttendance, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [filter, selectedDate]);
 
   return (
     <div className="flex flex-col h-full">
       <PageHeader
         title="Attendance"
-        description="Track employee clock-in and clock-out times in real-time."
+        description="Track employee attendance in real time."
       />
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <Card className="glass">
+      <div className="p-6">
+        {/* Filters */}
+        <div className="flex gap-3 mb-4">
+          {/* Today button */}
+          <button
+            onClick={() => {
+              setFilter("today");
+              setSelectedDate(null);
+            }}
+            className={`px-4 py-2 rounded ${
+              filter === "today"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-300"
+            }`}
+          >
+            Today
+          </button>
+
+          {/* Date Picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                onClick={() => setFilter("date")}
+                className={`px-4 py-2 rounded flex items-center gap-2 ${
+                  filter === "date"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-300"
+                }`}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                {selectedDate
+                  ? format(selectedDate, "dd MMM yyyy")
+                  : "Pick Date"}
+              </button>
+            </PopoverTrigger>
+
+            <PopoverContent align="start" className="p-0">
+              <Calendar
+                mode="single"
+                selected={selectedDate ?? new Date()}
+                onSelect={(date) => {
+                  if (!date) return;
+                  setSelectedDate(date);
+                  setFilter("date");
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* View Buttons */}
+          <button
+            onClick={() => setView("table")}
+            className={`px-4 py-2 rounded ${
+              view === "table"
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-300"
+            }`}
+          >
+            Table View
+          </button>
+
+          <button
+            onClick={() => setView("timeline")}
+            className={`px-4 py-2 rounded ${
+              view === "timeline"
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-300"
+            }`}
+          >
+            Timeline View
+          </button>
+        </div>
+
+        <Card>
           <CardHeader>
-            <CardTitle className="font-headline flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2">
               <Clock className="h-6 w-6" />
-              Today's Attendance (Live)
+              Attendance{" "}
+              {filter === "today"
+                ? "(Today)"
+                : selectedDate
+                ? `(${format(selectedDate, "dd MMM yyyy")})`
+                : ""}
             </CardTitle>
           </CardHeader>
 
           <CardContent>
             {loading ? (
-              <div className="text-center text-muted-foreground py-10">
-                Loading live attendance...
+              <div className="text-center text-gray-500 py-10">
+                Loading...
               </div>
+            ) : view === "timeline" ? (
+              <AttendanceTimeline data={attendance} />
             ) : (
               <Table>
                 <TableHeader>
@@ -97,34 +206,54 @@ export default function AttendancePage() {
 
                 <TableBody>
                   {attendance.map((record) => (
-                    <TableRow key={record.id}>
+                    <TableRow
+                      key={record.id}
+                      onClick={() =>
+                        router.push(
+                          `/admin/employees/${record.employeeId}`
+                        )
+                      }
+                      className="cursor-pointer hover:bg-muted/50 transition"
+                    >
                       <TableCell className="font-medium">
                         {record.employeeName}
                       </TableCell>
 
                       <TableCell>
                         <Badge
-                          variant={record.clockOut ? "secondary" : "default"}
-                          className={!record.clockOut ? "bg-green-500 text-white" : ""}
+                          variant={
+                            record.clockOut ? "secondary" : "default"
+                          }
+                          className={
+                            !record.clockOut
+                              ? "bg-green-500 text-white"
+                              : ""
+                          }
                         >
-                          {record.clockOut ? "Clocked Out" : "Clocked In"}
+                          {record.clockOut
+                            ? "Clocked Out"
+                            : "Clocked In"}
                         </Badge>
                       </TableCell>
 
-                      <TableCell className="flex items-center gap-2">
-                        <LogIn className="h-4 w-4 text-muted-foreground" />
-                        {safeFormat(record.clockIn)}
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <LogIn className="h-4 w-4 text-gray-500" />
+                          {safeFormat(record.clockIn)}
+                        </div>
                       </TableCell>
 
-                      <TableCell className="flex items-center gap-2">
-                        {record.clockOut ? (
-                          <>
-                            <LogOut className="h-4 w-4 text-muted-foreground" />
-                            {safeFormat(record.clockOut)}
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {record.clockOut ? (
+                            <>
+                              <LogOut className="h-4 w-4 text-gray-500" />
+                              {safeFormat(record.clockOut)}
+                            </>
+                          ) : (
+                            <span className="text-gray-500">—</span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -89,3 +89,44 @@ export async function GET(req: Request) {
     return new Response(JSON.stringify({ error: "Server error", details: String(error) }), { status: 500 });
   }
 }
+export async function DELETE(req: Request) {
+  console.log("🗑 [API] DELETE /api/notices triggered");
+
+  try {
+    const session = await getSession();
+
+    if (!session) {
+      console.error("🚫 Unauthorized — no session");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
+
+    const authUser = session.user;
+    console.log("👤 Auth User:", authUser);
+
+    // Only admins can delete notices
+    checkAdmin(authUser);
+    console.log("🛡 Admin check passed");
+
+    const { searchParams } = new URL(req.url);
+    const noticeId = searchParams.get("id");
+
+    if (!noticeId) {
+      console.error("⚠ Missing notice ID");
+      return new Response(JSON.stringify({ error: "Missing notice ID" }), { status: 400 });
+    }
+
+    console.log("🗑 Deleting Notice:", noticeId);
+
+    await prisma.notice.delete({
+      where: { id: noticeId },
+    });
+
+    console.log("✅ Notice Deleted");
+
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
+
+  } catch (error) {
+    console.error("❌ Error DELETE /api/notices:", error);
+    return new Response(JSON.stringify({ error: "Server error", details: String(error) }), { status: 500 });
+  }
+}

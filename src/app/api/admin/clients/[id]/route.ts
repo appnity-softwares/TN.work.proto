@@ -16,16 +16,7 @@ export async function GET(req: Request, context: RouteContext) {
   }
 
   const { id } = context.params;
-
   console.log("📍 Fetching client:", id);
-
-  // Special forward case
-  if (id === "export-all") {
-    return Response.json(
-      { error: "Forwarded to /export-all" },
-      { status: 400 }
-    );
-  }
 
   const client = await prisma.client.findUnique({
     where: { id },
@@ -77,8 +68,7 @@ export async function PUT(req: Request, context: RouteContext) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { id } = context.params;
-  const body = await req.json();
+  const { id } = context.params;  const body = await req.json();
 
   console.log("✏ Updating client:", id);
 
