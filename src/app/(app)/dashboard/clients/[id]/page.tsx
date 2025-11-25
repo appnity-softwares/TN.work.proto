@@ -1,3 +1,4 @@
+// /Users/kunal/Documents/WORK/studio-TN.proto-main/src/app/(app)/dashboard/clients/[id]/page.tsx
 import { cookies } from "next/headers";
 import ClientUI from "@/components/dashboard/client-ui";
 

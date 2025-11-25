@@ -47,8 +47,8 @@ export default function CreateClientPage() {
     const loadData = async () => {
       try {
         const [empRes, projRes] = await Promise.all([
-          fetch(`${baseUrl}/api/employees`, { cache: "no-store" }),
-          fetch(`${baseUrl}/api/allprojects`, { cache: "no-store" }),
+          fetch(`/api/employees`, { cache: "no-store" }),
+          fetch(`/api/allprojects`, { cache: "no-store" }),
         ]);
 
         const empData = await empRes.json();
@@ -99,7 +99,7 @@ export default function CreateClientPage() {
     try {
       setLoading(true);
 
-      const res = await fetch(`${baseUrl}/api/admin/clients`, {
+      const res = await fetch(`/api/admin/clients`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

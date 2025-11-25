@@ -99,8 +99,8 @@ export default function ClientProfile({ client }: { client: any }) {
   async function loadOptions() {
     try {
       const [empRes, projRes] = await Promise.all([
-        fetch(`${BASE_URL}/api/employees`),
-        fetch(`${BASE_URL}/api/allprojects`),
+        fetch(`/api/employees`),
+        fetch(`/api/allprojects`),
       ]);
 
       const empData = await empRes.json();
@@ -117,7 +117,7 @@ export default function ClientProfile({ client }: { client: any }) {
   async function updateStatus() {
     setUpdatingStatus(true);
 
-    const res = await fetch(`${BASE_URL}/api/admin/clients/${client.id}`, {
+    const res = await fetch(`/api/admin/clients/${client.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -137,7 +137,7 @@ export default function ClientProfile({ client }: { client: any }) {
     setSavingAssignments(true);
 
     const res = await fetch(
-      `${BASE_URL}/api/admin/clients/${client.id}/assign`,
+      `/api/admin/clients/${client.id}/assign`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
