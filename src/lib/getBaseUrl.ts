@@ -3,5 +3,5 @@ export function getBaseUrl() {
     return window.location.origin; // client
   }
 
-  return process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"; // server
+  return process.env.NEXT_PUBLIC_BASE_URL // server
 }

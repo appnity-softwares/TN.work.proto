@@ -34,7 +34,7 @@ export default function CreateClientPage() {
    * ------------------------------------------- */
   useEffect(() => {
     const url = getBaseUrl();
-    setBaseUrl(url);
+    setBaseUrl(url || "");
     console.log("🌐 BASE_URL:", url);
   }, []);
 
