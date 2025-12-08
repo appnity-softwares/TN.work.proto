@@ -72,9 +72,9 @@ export function EmployeeProfile({ user, allAttendance }: any) {
 
             <div>
               <h2 className="text-xl sm:text-2xl font-bold">{user?.name}</h2>
-              <p className="text-xs sm:text-sm text-white/80">
+              <div className="text-xs sm:text-sm text-white/80">
                 {user?.employeeCode} • {user?.email}
-              </p>
+              </div>
 
               <div className="flex items-center gap-3 mt-2">
                  <Badge variant={user.status === 'ACTIVE' ? 'default' : user.status === 'SUSPENDED' ? 'secondary' : 'destructive'}>{user.status}</Badge>
@@ -144,11 +144,11 @@ export function EmployeeProfile({ user, allAttendance }: any) {
         <TabsContent value="overview">
           <Card className="mt-4">
             <CardContent className="p-4 sm:p-6 space-y-2">
-              <p><strong>Joined:</strong> {safeFormat(user?.joinDate)}</p>
-              <p><strong>Role:</strong> {user?.role}</p>
-                <p><strong>Status:</strong> <Badge variant={user.status === 'ACTIVE' ? 'default' : user.status === 'SUSPENDED' ? 'secondary' : 'destructive'}>{user.status}</Badge></p>
+              <div><strong>Joined:</strong> {safeFormat(user?.joinDate)}</div>
+              <div><strong>Role:</strong> {user?.role}</div>
+                <div><strong>Status:</strong> <Badge variant={user.status === 'ACTIVE' ? 'default' : user.status === 'SUSPENDED' ? 'secondary' : 'destructive'}>{user.status}</Badge></div>
                 {user.status === 'SUSPENDED' && suspensionReason && (
-                    <p><strong>Suspension Reason:</strong> {suspensionReason}</p>
+                    <div><strong>Suspension Reason:</strong> {suspensionReason}</div>
                 )}
             </CardContent>
           </Card>
@@ -185,9 +185,9 @@ export function EmployeeProfile({ user, allAttendance }: any) {
         <TabsContent value="insights">
           <Card className="mt-4">
             <CardContent className="p-4 sm:p-6 space-y-2 text-sm">
-              <p><strong>Most Active Day:</strong> {mostActiveDay}</p>
-              <p><strong>Attendance Trend:</strong> Improving ✅</p>
-              <p><strong>Consistency Score:</strong> 82%</p>
+              <div><strong>Most Active Day:</strong> {mostActiveDay}</div>
+              <div><strong>Attendance Trend:</strong> Improving ✅</div>
+              <div><strong>Consistency Score:</strong> 82%</div>
             </CardContent>
           </Card>
         </TabsContent>
