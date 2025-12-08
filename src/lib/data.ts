@@ -1,4 +1,4 @@
-import prisma from "./db";
+import { db as prisma } from "./db";
 import type { User, Notice, WorkLog, ErrorLog, DiscussionPost } from "./types";
 
 // -------------------- USERS --------------------
