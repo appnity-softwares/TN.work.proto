@@ -169,7 +169,7 @@ export function NoticeManagement({ initialNotices, employees }: NoticeManagement
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting ? <Loader2 className="animate-spin" /> : "Post Notice"}
             </Button>
           </form>
@@ -198,41 +198,46 @@ function NoticeList({ notices, onDelete }: NoticeListProps) {
         <CardDescription>A list of all created notices.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Audience</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="text-right"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {notices.map((notice) => (
-              <TableRow key={notice.id}>
-                <TableCell className="font-medium">{notice.title}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={notice.type === "PUBLIC" ? "secondary" : "outline"}
-                  >
-                    {notice.type === "PUBLIC" ? <Users className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
-                    {notice.type === "PUBLIC" ? "Public" : "Private"}
-                  </Badge>
-                </TableCell>
-                <TableCell>{format(new Date(notice.createdAt), "MMM d")}</TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onDelete(notice.id)}
-                  >
-                    <Trash className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="overflow-x-auto">
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead className="hidden sm:table-cell">Audience</TableHead>
+                <TableHead className="hidden md:table-cell">Date</TableHead>
+                <TableHead className="text-right"></TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {notices.map((notice) => (
+                <TableRow key={notice.id}>
+                    <TableCell className="font-medium">
+                        <p>{notice.title}</p>
+                        <p className="text-xs text-muted-foreground sm:hidden">{format(new Date(notice.createdAt), "MMM d, yyyy")}</p>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                    <Badge
+                        variant={notice.type === "PUBLIC" ? "secondary" : "outline"}
+                    >
+                        {notice.type === "PUBLIC" ? <Users className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
+                        {notice.type === "PUBLIC" ? "Public" : "Private"}
+                    </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{format(new Date(notice.createdAt), "MMM d, yyyy")}</TableCell>
+                    <TableCell className="text-right">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDelete(notice.id)}
+                    >
+                        <Trash className="h-4 w-4 text-destructive" />
+                    </Button>
+                    </TableCell>
+                </TableRow>
+                ))}
+            </TableBody>
+            </Table>
+        </div>
       </CardContent>
     </Card>
   );

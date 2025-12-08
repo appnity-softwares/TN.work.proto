@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
-import prisma from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { EmployeeProfile } from "@/components/admin/employee-profile";
+import { subDays } from 'date-fns';
 
 interface Props {
   params: { id: string };
@@ -14,10 +15,17 @@ export default async function EmployeeProfilePage({ params }: Props) {
     notFound();
   }
 
+  const thirtyDaysAgo = subDays(new Date(), 30);
+
   const user = await prisma.user.findUnique({
     where: { id: params.id },
     include: {
       attendance: {
+        where: {
+          checkIn: {
+            gte: thirtyDaysAgo,
+          },
+        },
         orderBy: { checkIn: "desc" },
       },
       workLogs: {
@@ -28,5 +36,11 @@ export default async function EmployeeProfilePage({ params }: Props) {
 
   if (!user) notFound();
 
-  return <EmployeeProfile user={user} />;
+  // Get all attendance for the calendar view and lifetime stats
+  const allAttendance = await prisma.attendance.findMany({
+    where: { userId: params.id },
+    orderBy: { checkIn: 'asc' },
+  });
+
+  return <EmployeeProfile user={user} allAttendance={allAttendance} />;
 }

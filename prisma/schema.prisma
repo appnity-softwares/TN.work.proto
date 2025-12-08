@@ -43,6 +43,13 @@ enum ClientLogStatus {
   CANCELLED
 }
 
+// Add a new enum for the Bin model
+enum BinType {
+  NOTE
+  TODO
+  IDEA
+}
+
 // -------------------------------
 //  USER MODEL (Admin + Employees)
 // -------------------------------
@@ -54,6 +61,7 @@ model User {
   role           Role       @default(EMPLOYEE)
   status         UserStatus @default(ACTIVE)
   joinDate       DateTime   @default(now())
+  meta           Json?      // For storing details like mobile, address, etc.
 
   // Relations
   attendance        Attendance[]
@@ -64,6 +72,7 @@ model User {
   projects          Project[]         @relation("UserProjects")
   discussionPosts   DiscussionPost[]
   discussionReplies DiscussionReply[]
+  bins              Bin[] // Add the new relation to the Bin model
 
   // Client relations
   clientAssignments ClientEmployee[]
@@ -276,4 +285,18 @@ model ClientProject {
   createdAt DateTime @default(now())
 
   @@unique([clientId, projectId])
+}
+
+// -------------------------------
+//  BIN MODEL (Admin's Diary)
+// -------------------------------
+model Bin {
+  id        String   @id @default(uuid())
+  content   String
+  type      BinType
+  date      DateTime? // New field for the calendar view
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
 }

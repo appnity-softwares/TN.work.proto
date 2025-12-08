@@ -8,7 +8,8 @@ import {
   WorkLog as PrismaWorkLog,
   ErrorLog as PrismaErrorLog,
   DiscussionPost as PrismaDiscussionPost,
-  DiscussionReply as PrismaDiscussionReply
+  DiscussionReply as PrismaDiscussionReply,
+  Bin as PrismaBin
 } from "@prisma/client";
 
 export const Role = PrismaRole; // runtime export
@@ -19,6 +20,7 @@ export type User = PrismaUser;
 export type Notice = PrismaNotice;
 export type WorkLog = PrismaWorkLog;
 export type ErrorLog = PrismaErrorLog;
+export type Bin = PrismaBin;
 
 export type DiscussionPost = PrismaDiscussionPost & {
   user: PrismaUser;
@@ -26,3 +28,13 @@ export type DiscussionPost = PrismaDiscussionPost & {
 };
 
 export type SessionUser = Omit<PrismaUser, "hashedPasscode">;
+
+export type UserWithMeta = PrismaUser & {
+    meta: {
+        detailsSubmitted?: boolean;
+        mobileNumber?: string;
+        address?: string;
+        emergencyContact?: string;
+        detailsApproved?: boolean;
+    } | null;
+};
