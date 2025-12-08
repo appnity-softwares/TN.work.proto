@@ -1,4 +1,4 @@
-import prisma from "@/lib/db";
+import { db as prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { generateToken } from "@/lib/auth/jwt";
 

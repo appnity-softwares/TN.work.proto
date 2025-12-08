@@ -1,5 +1,5 @@
 //src/app/api/admin/clients/[id]/export/route.ts
-import prisma from "@/lib/db";
+import { db as prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 

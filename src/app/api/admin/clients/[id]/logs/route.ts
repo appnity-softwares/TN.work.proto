@@ -1,5 +1,5 @@
 // /Users/kunal/Documents/WORK/studio-TN.proto-main/src/app/api/admin/clients/[id]/logs/route.ts
-import prisma from "@/lib/db";
+import { db as prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 
