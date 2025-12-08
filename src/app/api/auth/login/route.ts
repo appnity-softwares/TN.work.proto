@@ -1,11 +1,11 @@
-import { db as prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { generateToken } from "@/lib/auth/jwt";
 
 export async function POST(req: Request) {
   const { employeeCode, passcode } = await req.json();
 
-  const user = await prisma.user.findUnique({
+  const user = await db.user.findUnique({
     where: { employeeCode }
   });
 

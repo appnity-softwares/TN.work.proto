@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/session";
-import prisma from "@/lib/db";
+import { db as prisma } from "@/lib/db";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { NextRequest } from "next/server";
 

@@ -1,4 +1,4 @@
-import prisma from "@/lib/db";
+import { db as prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { getUserFromRequest } from "@/lib/auth/verifyToken";
 import { checkAdmin } from "@/lib/auth/checkAdmin";
