@@ -11,7 +11,7 @@ export default function EmployeesPage() {
     async function fetchEmployees() {
       const response = await fetch('/api/employees');
       const data = await response.json();
-      setEmployees(data);
+      setEmployees(data.employees);
     }
 
     fetchEmployees();
