@@ -1,44 +1,51 @@
-import { db as prisma } from "@/lib/db";
-import { getSession } from "@/lib/session";
-import { format } from "date-fns";
 
-export async function GET() {
-  const session = await getSession();
-  if (!session?.user)
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { z } from 'zod';
+import { startOfMonth, endOfMonth, parseISO } from 'date-fns';
 
-  const userId = session.user.id;
+const schema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/), // YYYY-MM
+});
 
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const month = searchParams.get('month');
 
-  const records = await prisma.attendance.findMany({
-    where: {
-      userId,
-      checkIn: { gte: firstDay, lt: nextMonth },
-    },
-    orderBy: { checkIn: "asc" },
-  });
+  const validated = schema.safeParse({ month });
 
-  const days: Record<string, number> = {};
-
-  for (const r of records) {
-    const day = format(new Date(r.checkIn), "d MMM");
-
-    const checkOut =
-      r.checkOut ??
-      new Date(); // still clocked in → count time up to now
-
-    const ms = new Date(checkOut).getTime() - new Date(r.checkIn).getTime();
-
-    days[day] = (days[day] || 0) + ms;
+  if (!validated.success) {
+    return NextResponse.json({ error: 'Invalid month format. Use YYYY-MM' }, { status: 400 });
   }
 
-  const result = Object.entries(days).map(([date, ms]) => ({
-    date,
-    hours: Number((ms / 1000 / 60 / 60).toFixed(2)),
-  }));
+  const targetDate = parseISO(`${validated.data.month}-01`);
+  const startDate = startOfMonth(targetDate);
+  const endDate = endOfMonth(targetDate);
 
-  return Response.json({ data: result });
+  try {
+    const attendanceRecords = await db.attendance.findMany({
+      where: {
+        checkIn: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        checkIn: true,
+      },
+    });
+
+    // We just need to know which days have at least one person present.
+    const presentDays = new Set<string>();
+    attendanceRecords.forEach(record => {
+        const day = record.checkIn.toISOString().split('T')[0]; // YYYY-MM-DD
+        presentDays.add(day);
+    });
+
+    return NextResponse.json({ presentDays: Array.from(presentDays) });
+
+  } catch (error) {
+    console.error('Failed to fetch monthly attendance:', error);
+    return NextResponse.json({ error: 'Failed to fetch monthly attendance' }, { status: 500 });
+  }
 }

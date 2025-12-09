@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
-import { createUser, resetPassword } from '@/app/api/admin-actions';
+import { createUser } from '@/app/api/admin-actions';
 import {
   Select,
   SelectContent,
@@ -44,7 +44,7 @@ import {
 } from '../ui/select';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import { deactivateUser, suspendUser } from '@/app/(app)/admin/employees/actions';
+import { deactivateUser, suspendUser, resetPassword } from '@/app/(app)/admin/employees/actions';
 import { Textarea } from '@/components/ui/textarea';
 
 interface EmployeeManagementProps {
@@ -254,7 +254,7 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
                       <Button
                           variant='outline'
                           size='icon'
-                          onClick={() => router.push(`/admin/employees/${user.id}`)}
+                          onClick={() => router.push(`/admin/employees/${user.id}/edit`)}
                       >
                           <Edit className='h-4 w-4' />
                       </Button>

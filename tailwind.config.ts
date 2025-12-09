@@ -62,6 +62,14 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        present: {
+          DEFAULT: 'hsl(var(--present))',
+          foreground: 'hsl(var(--present-foreground))',
+        },
+        absent: {
+          DEFAULT: 'hsl(var(--absent))',
+          foreground: 'hsl(var(--absent-foreground))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

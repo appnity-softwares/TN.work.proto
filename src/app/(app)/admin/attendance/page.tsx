@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, LogIn, LogOut, CalendarIcon } from "lucide-react";
-import { format, isValid } from "date-fns";
+import { format, isValid, isSameDay, startOfMonth } from "date-fns";
 import AttendanceTimeline from "@/components/attendance-timeline";
 import {
   Popover,
@@ -58,7 +58,22 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"today" | "date">("today");
   const [view, setView] = useState<"table" | "timeline">("table");
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [presentDays, setPresentDays] = useState<string[]>([]);
+
+  const fetchMonthlyData = async (month: Date) => {
+    const monthStr = format(month, 'yyyy-MM');
+    try {
+      const res = await fetch(`/api/attendance/monthly?month=${monthStr}`);
+      const data = await res.json();
+      if (data.presentDays) {
+        setPresentDays(data.presentDays);
+      }
+    } catch (error) {
+      console.error('Failed to fetch monthly attendance:', error);
+    }
+  };
 
   const fetchAttendance = async () => {
     try {
@@ -93,6 +108,12 @@ export default function AttendancePage() {
     return () => clearInterval(interval);
   }, [filter, selectedDate]);
 
+  useEffect(() => {
+    fetchMonthlyData(currentMonth);
+  }, [currentMonth]);
+
+  const presentDaysSet = new Set(presentDays.map(day => day.split('T')[0]));
+
   return (
     <div className="flex flex-col h-full">
       <PageHeader
@@ -107,7 +128,7 @@ export default function AttendancePage() {
           <button
             onClick={() => {
               setFilter("today");
-              setSelectedDate(null);
+              setSelectedDate(new Date());
             }}
             className={`px-4 py-2 rounded ${
               filter === "today"
@@ -124,13 +145,13 @@ export default function AttendancePage() {
               <button
                 onClick={() => setFilter("date")}
                 className={`px-4 py-2 rounded flex items-center gap-2 ${
-                  filter === "date"
+                  filter === "date" && selectedDate
                     ? "bg-blue-600 text-white"
                     : "bg-gray-300"
                 }`}
               >
                 <CalendarIcon className="h-4 w-4" />
-                {selectedDate
+                {selectedDate && filter === 'date'
                   ? format(selectedDate, "dd MMM yyyy")
                   : "Pick Date"}
               </button>
@@ -145,7 +166,25 @@ export default function AttendancePage() {
                   setSelectedDate(date);
                   setFilter("date");
                 }}
+                onMonthChange={(month) => setCurrentMonth(month)}
+                modifiers={{
+                  present: (day) => presentDaysSet.has(format(day, 'yyyy-MM-dd')),
+                  absent: (day) => {
+                    const month = startOfMonth(currentMonth);
+                    if (day < month || day > new Date()) return false; // Only for current month
+                    if (isSameDay(day, new Date())) return false; // Today is not absent yet
+                    return !presentDaysSet.has(format(day, 'yyyy-MM-dd'));
+                  }
+                }}
+                modifiersClassNames={{
+                  present: 'day-present',
+                  absent: 'day-absent'
+                }}
               />
+              <div className="flex justify-around p-2 text-sm border-t">
+                  <div className="flex items-center gap-2"><div className="h-4 w-4 bg-present rounded-full"></div>Present</div>
+                  <div className="flex items-center gap-2"><div className="h-4 w-4 bg-absent rounded-full"></div>Absent</div>
+              </div>
             </PopoverContent>
           </Popover>
 

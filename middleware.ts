@@ -5,6 +5,7 @@ export function middleware(req: Request) {
   const protectedRoutes = [
     "/api/admin",
     "/api/attendance",
+    "/api/bin",
     "/api/work",
     "/api/notices",
     "/api/errors",

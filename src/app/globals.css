@@ -33,6 +33,10 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --present: 145 63% 90%;
+    --present-foreground: 145 75% 15%;
+    --absent: 0 72% 90%;
+    --absent-foreground: 0 80% 20%;
   }
   .dark {
     --background: 275 15% 10%;
@@ -59,6 +63,10 @@ body {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --present: 145 63% 20%;
+    --present-foreground: 145 75% 85%;
+    --absent: 0 72% 25%;
+    --absent-foreground: 0 80% 80%;
   }
 }
 

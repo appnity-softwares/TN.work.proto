@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EditEmployeeForm } from './edit-form';
 
-interface EmployeePageProps {
+interface EmployeeEditPageProps {
     params: { id: string };
 }
 
-export default async function EmployeePage({ params }: EmployeePageProps) {
+export default async function EmployeeEditPage({ params }: EmployeeEditPageProps) {
     const employee = await db.user.findUnique({
         where: { id: params.id },
     });
@@ -19,13 +20,10 @@ export default async function EmployeePage({ params }: EmployeePageProps) {
         <div className="space-y-4">
             <Card>
                 <CardHeader>
-                    <CardTitle>Employee Details</CardTitle>
+                    <CardTitle>Edit Employee</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p><strong>Name:</strong> {employee.name}</p>
-                    <p><strong>Employee Code:</strong> {employee.employeeCode}</p>
-                    <p><strong>Role:</strong> {employee.role}</p>
-                    <p><strong>Status:</strong> {employee.status}</p>
+                    <EditEmployeeForm employee={employee} />
                 </CardContent>
             </Card>
         </div>
