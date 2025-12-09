@@ -9,11 +9,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
     const upcomingItems = await db.bin.findMany({
       where: {
         userId: user.id,
         date: {
-          gte: new Date(),
+          gte: tomorrow,
         },
       },
       orderBy: {

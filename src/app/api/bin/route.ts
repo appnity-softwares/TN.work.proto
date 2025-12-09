@@ -5,8 +5,8 @@ import { BinType } from '@prisma/client';
 
 export async function POST(req: Request) {
   try {
-    const { user } = await getAuth();
-    if (!user || user.role !== 'ADMIN') {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
         content,
         type: type as BinType,
         date: date ? new Date(date) : null, // Handle the optional date
-        userId: user.id,
+        userId: session.id,
       },
     });
 
@@ -37,20 +37,20 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const { user } = await getAuth();
-    if (!user || user.role !== 'ADMIN') {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const date = searchParams.get('date');
 
-    const whereClause: any = { userId: user.id };
+    const whereClause: any = { userId: session.id };
     if (date) {
       const startDate = new Date(date);
       const endDate = new Date(date);
       endDate.setDate(endDate.getDate() + 1);
-      whereClause.createdAt = {
+      whereClause.date = {
         gte: startDate,
         lt: endDate,
       };
@@ -70,8 +70,8 @@ export async function GET(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { user } = await getAuth();
-    if (!user || user.role !== 'ADMIN') {
+    const session = await getAuth();
+    if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
