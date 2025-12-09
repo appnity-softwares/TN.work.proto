@@ -1,5 +1,5 @@
 import cloudinary from "@/lib/cloudinary";
-import prisma from "@/lib/db";
+import { db as prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 
 export async function POST(req: Request) {

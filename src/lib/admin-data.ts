@@ -1,4 +1,4 @@
-import prisma from "@/lib/db";
+import { db as prisma } from "@/lib/db";
 
 export async function getEmployeeProfile(userId: string) {
   const user = await prisma.user.findUnique({

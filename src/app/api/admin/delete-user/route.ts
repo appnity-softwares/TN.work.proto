@@ -1,4 +1,4 @@
-import prisma from "@/lib/db";
+import { db as prisma } from "@/lib/db";
 import { checkAdmin } from "@/lib/auth/checkAdmin";
 
 export async function DELETE(req: Request) {
