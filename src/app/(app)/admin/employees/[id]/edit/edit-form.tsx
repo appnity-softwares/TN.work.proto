@@ -15,7 +15,7 @@ import {
 import { Role } from '@prisma/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import { updateUser } from './actions';
+import { updateUser } from '../../actions';
 
 interface EditEmployeeFormProps {
   employee: User;
