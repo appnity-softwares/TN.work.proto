@@ -6,7 +6,7 @@ import ClientUI from "@/components/dashboard/client-ui";
 async function getClient(id: string) {
   const cookieStore = await cookies();
 
-  const res = await fetch(`http://localhost:3000/api/clients/${id}`, {
+  const res = await fetch(`/api/clients/${id}`, {
     cache: "no-store",
     headers: {
       Cookie: cookieStore.toString(),

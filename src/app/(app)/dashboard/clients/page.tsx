@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 async function getAssignedClients() {
   const cookieStore = cookies();
 
-  const res = await fetch("http://localhost:3000/api/clients", {
+  const res = await fetch("/api/clients", {
     headers: {
       Cookie: cookieStore.toString(),
     },

@@ -1,91 +1,132 @@
-'use server';
+"use server";
 
-import { db as prisma } from '@/lib/db';
-import { revalidatePath } from 'next/cache';
-import bcrypt from 'bcryptjs';
+import { db } from "@/lib/db";
+import { revalidatePath } from "next/cache";
+import crypto from "crypto";
 
-export async function deactivateUser(userId: string) {
-  try {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { status: 'INACTIVE' },
-    });
-    revalidatePath('/admin/employees');
-    return { success: true, message: 'User has been deactivated.' };
-  } catch (error) {
-    console.error('Failed to deactivate user:', error);
-    return { success: false, message: 'Failed to deactivate user.' };
+import { sendEmail } from "@/lib/email/sendEmail";
+import { resetPasswordEmail } from "@/lib/email/templates/reset";
+
+import { sendSuspendEmail } from "@/lib/email/templates/suspend";
+import { sendUnsuspendEmail } from "@/lib/email/templates/unsuspend";
+
+import { getBaseUrl } from "@/lib/getBaseUrl";
+
+/* ---------------------------------------------------
+   REQUEST PASSWORD RESET (ADMIN → EMPLOYEE)
+---------------------------------------------------- */
+export async function requestPasswordReset(userId: string) {
+  const user = await db.user.findUnique({
+    where: { id: userId }
+  });
+
+  if (!user || !user.email) {
+    return { success: false, message: "User not found or missing email" };
   }
+
+  const token = crypto.randomBytes(24).toString("hex");
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15m
+
+  await db.passwordResetToken.create({
+    data: { userId, token, expiresAt }
+  });
+
+  const link = `${getBaseUrl()}/reset-password/${token}`;
+
+  await sendEmail({
+    to: user.email,
+    subject: "Reset your TaskNity password",
+    html: resetPasswordEmail({
+      name: user.name,
+      link
+    })
+  });
+
+  return { success: true, message: "Password reset link sent" };
 }
 
-export async function suspendUser(userId: string, reason: string) {
-    try {
-        const user = await (prisma.user.findUnique as any)({
-            where: { id: userId },
-            select: { meta: true },
-        });
+/* ---------------------------------------------------
+   SUSPEND USER
+---------------------------------------------------- */
+export async function suspendUser(userId: string, reason = "Suspended by admin") {
+  // fetch user first for meta + email
+  const existing = await db.user.findUnique({ where: { id: userId } });
 
-        if (!user) {
-            return { success: false, message: 'User not found.' };
-        }
+  if (!existing) return { success: false, message: "User not found" };
 
-        const updatedMeta = {
-            ...(user.meta as object),
-            suspensionReason: reason,
-        };
+  const updatedMeta = {
+    ...(existing.meta || {}),
+    suspensionReason: reason
+  };
 
-        await (prisma.user.update as any)({
-            where: { id: userId },
-            data: {
-                status: 'SUSPENDED',
-                meta: updatedMeta,
-            },
-        });
-        revalidatePath('/admin/employees');
-        return { success: true, message: 'User has been suspended.' };
-    } catch (error) {
-        console.error('Failed to suspend user:', error);
-        return { success: false, message: 'Failed to suspend user.' };
-    }
+  const user = await db.user.update({
+    where: { id: userId },
+    data: { status: "SUSPENDED", meta: updatedMeta as any }
+  });
+
+  // send email
+  if (user.email) {
+    await sendSuspendEmail({
+      to: user.email,
+      reason
+    });
+  }
+
+  revalidatePath("/admin/employees");
+  return { success: true, message: "User suspended" };
 }
 
-export async function resetPassword(userId: string) {
-    try {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash('password', salt);
+/* ---------------------------------------------------
+   UNSUSPEND USER
+---------------------------------------------------- */
+export async function unsuspendUser(userId: string) {
+  const existing = await db.user.findUnique({ where: { id: userId } });
 
-        await prisma.user.update({
-            where: { id: userId },
-            data: { hashedPasscode: hashedPassword },
-        });
+  if (!existing) return { success: false, message: "User not found" };
 
-        return { success: true, message: "User's password has been reset to 'password'." };
-    } catch (error) {
-        console.error('Failed to reset password:', error);
-        return { success: false, message: 'Failed to reset password.' };
-    }
+  const updatedMeta = {
+    ...(existing.meta || {}),
+    suspensionReason: null
+  };
+
+  const user = await db.user.update({
+    where: { id: userId },
+    data: { status: "ACTIVE", meta: updatedMeta as any }
+  });
+
+  // send welcome-back email
+  if (user.email) {
+    await sendUnsuspendEmail({
+      to: user.email
+    });
+  }
+
+  revalidatePath("/admin/employees");
+  return { success: true, message: "User unsuspended" };
 }
 
-export async function updateUser(prevState: any, formData: FormData) {
-    const id = formData.get('id') as string;
-    const name = formData.get('name') as string;
-    const employeeCode = formData.get('employeeCode') as string;
-    const role = formData.get('role') as string;
+/* ---------------------------------------------------
+   DEACTIVATE USER
+---------------------------------------------------- */
+export async function deactivateUser(userId: string) {
+  await db.user.update({
+    where: { id: userId },
+    data: { status: "INACTIVE" }
+  }).catch(() => null);
 
-    try {
-        await prisma.user.update({
-            where: { id },
-            data: {
-                name,
-                employeeCode,
-                role: role as any,
-            },
-        });
+  revalidatePath("/admin/employees");
+  return { success: true, message: "User deactivated" };
+}
 
-        revalidatePath('/admin/employees');
-        return { success: true, message: 'Employee updated successfully.' };
-    } catch (error) {
-        console.error('Failed to update employee:', error);
-        return { success: false, message: 'Failed to update employee.' };
-    }
+/* ---------------------------------------------------
+   ACTIVATE USER
+---------------------------------------------------- */
+export async function activateUser(userId: string) {
+  const user = await db.user.update({
+    where: { id: userId },
+    data: { status: "ACTIVE" }
+  }).catch(() => null);
+
+  revalidatePath("/admin/employees");
+  return { success: true, message: "User activated" };
 }

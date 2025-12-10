@@ -49,6 +49,8 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/notices', icon: Bell, label: 'Notices' },
   { href: '/admin/bin', icon: Trash, label: 'Bin' },
   { href: '/admin/employee-details', icon: Users, label: 'Employee Details' },
+  { href: '/admin/reminders', icon: Clock, label: 'Meetings' },
+
 ];
 
 export function AppSidebarNav({ user }: { user: SessionUser }) {

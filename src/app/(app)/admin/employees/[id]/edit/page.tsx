@@ -1,31 +1,29 @@
-import { notFound } from 'next/navigation';
-import { db } from '@/lib/db';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { EditEmployeeForm } from './edit-form';
+// /src/app/(app)/admin/employees/[id]/edit/page.tsx
+import { notFound } from "next/navigation";
+import { db } from "@/lib/db";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import EditEmployeeForm from "@/components/admin/EditEmployeeForm";
 
-interface EmployeeEditPageProps {
-    params: { id: string };
+interface Props {
+  params: { id: string };
 }
 
-export default async function EmployeeEditPage({ params }: EmployeeEditPageProps) {
-    const employee = await db.user.findUnique({
-        where: { id: params.id },
-    });
+export default async function EmployeeEditPage({ params }: Props) {
+  const employee = await db.user.findUnique({ where: { id: params.id } });
 
-    if (!employee) {
-        notFound();
-    }
+  if (!employee) notFound();
 
-    return (
-        <div className="space-y-4">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Edit Employee</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <EditEmployeeForm employee={employee} />
-                </CardContent>
-            </Card>
-        </div>
-    );
+  return (
+    <div className="max-w-3xl mx-auto py-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Edit Employee</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* server component passes initial data to client form */}
+          <EditEmployeeForm initial={employee} />
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

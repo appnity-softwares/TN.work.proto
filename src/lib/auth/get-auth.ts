@@ -4,8 +4,10 @@ import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/jwt';
 import { SessionUser } from '@/lib/types';
 
+const SESSION_COOKIE_NAME = "tn_proto_session"; // 🔥 match session.ts
+
 export async function getAuth() {
-    const token = (await cookies()).get('auth_token')?.value;
+    const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
     if (!token) {
         return null;
     }
@@ -15,5 +17,5 @@ export async function getAuth() {
         return null;
     }
 
-    return decoded as SessionUser;
+    return { user: decoded as SessionUser };
 }

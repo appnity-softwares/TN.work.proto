@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -12,69 +11,104 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { deactivateUser, suspendUser, resetPassword } from './actions';
+import { deactivateUser, suspendUser, resetPasswordCustom, activateUser, unsuspendUser } from './actions';
 
-interface EmployeeActionsCellProps {
-  employee: User;
-}
-
-export function EmployeeActionsCell({ employee }: EmployeeActionsCellProps) {
-  const [isSuspended, setIsSuspended] = useState(employee.status === 'SUSPENDED');
+export function EmployeeActionsCell({ employee }: { employee: User }) {
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
 
   const handleDeactivate = async () => {
-    if (window.confirm('Are you sure you want to deactivate this user?')) {
+    if (confirm('Deactivate this user?')) {
       const result = await deactivateUser(employee.id);
-      if (result.success) {
-        alert(result.message);
-      } else {
-        alert(result.message);
-      }
+      alert(result.message);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (confirm('Activate this user?')) {
+      const result = await activateUser(employee.id);
+      alert(result.message);
     }
   };
 
   const handleSuspend = async () => {
-    const reason = window.prompt('Please provide a reason for suspension:');
+    const reason = prompt('Reason for suspension:');
     if (reason) {
       const result = await suspendUser(employee.id, reason);
-      if (result.success) {
-        setIsSuspended(true);
-        alert(result.message);
-      } else {
-        alert(result.message);
-      }
+      alert(result.message);
+    }
+  };
+
+  const handleUnsuspend = async () => {
+    if (confirm('Remove suspension?')) {
+      const result = await unsuspendUser(employee.id);
+      alert(result.message);
     }
   };
 
   const handleResetPassword = async () => {
-    if (window.confirm("Are you sure you want to reset this user's password?")) {
-      const result = await resetPassword(employee.id);
-      if (result.success) {
-        alert(result.message);
-      } else {
-        alert(result.message);
-      }
-    }
+    if (!newPassword) return alert("Enter a password");
+    const result = await resetPasswordCustom(employee.id, newPassword);
+    alert(result.message);
+    setShowPasswordModal(false);
+    setNewPassword('');
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(employee.id)}>
-          Copy Employee ID
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleResetPassword}>Reset Password</DropdownMenuItem>
-        {!isSuspended && (
-          <DropdownMenuItem onClick={handleSuspend}>Suspend</DropdownMenuItem>
-        )}
-        <DropdownMenuItem onClick={handleDeactivate}>Deactivate</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      {/* Action Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(employee.id)}>
+            Copy Employee ID
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={() => setShowPasswordModal(true)}>
+            Reset Password (Custom)
+          </DropdownMenuItem>
+
+          {employee.status !== 'SUSPENDED' && (
+            <DropdownMenuItem onClick={handleSuspend}>Suspend</DropdownMenuItem>
+          )}
+
+          {employee.status === 'SUSPENDED' && (
+            <DropdownMenuItem onClick={handleUnsuspend}>Unsuspend</DropdownMenuItem>
+          )}
+
+          {employee.status === 'ACTIVE' ? (
+            <DropdownMenuItem onClick={handleDeactivate}>Deactivate</DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={handleActivate}>Activate</DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl shadow-lg space-y-4 w-[350px]">
+            <h2 className="font-semibold">Set New Password</h2>
+            <input
+              className="border px-3 py-2 rounded w-full"
+              type="password"
+              placeholder="Enter new password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowPasswordModal(false)}>Cancel</Button>
+              <Button onClick={handleResetPassword}>Update</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

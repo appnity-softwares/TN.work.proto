@@ -43,7 +43,6 @@ enum ClientLogStatus {
   CANCELLED
 }
 
-// Add a new enum for the Bin model
 enum BinType {
   NOTE
   TODO
@@ -56,14 +55,15 @@ enum BinType {
 model User {
   id             String     @id @default(uuid())
   name           String
+  email          String?    @unique
   employeeCode   String     @unique
   hashedPasscode String
   role           Role       @default(EMPLOYEE)
   status         UserStatus @default(ACTIVE)
   joinDate       DateTime   @default(now())
-  meta           Json?      // For storing details like mobile, address, etc.
-
-  // Relations
+  meta           Json?      
+ avatar         String?
+ 
   attendance        Attendance[]
   workLogs          WorkLog[]
   noticesIssued     Notice[]          @relation("AdminIssuedNotices")
@@ -72,11 +72,12 @@ model User {
   projects          Project[]         @relation("UserProjects")
   discussionPosts   DiscussionPost[]
   discussionReplies DiscussionReply[]
-  bins              Bin[] // Add the new relation to the Bin model
-
-  // Client relations
+  bins              Bin[]
+  reminders         Reminder[]
   clientAssignments ClientEmployee[]
-  createdClientLogs ClientLog[]        @relation("UserClientLogs")
+  createdClientLogs ClientLog[]       @relation("UserClientLogs")
+
+  passwordResetTokens PasswordResetToken[]   // <── add this
 }
 
 // -------------------------------
@@ -143,13 +144,8 @@ model Project {
   description String?
   createdAt   DateTime @default(now())
 
-  // Assigned employees (optional)
-  users User[] @relation("UserProjects")
-
-  // Linked clients
-  clientLinks ClientProject[]
-
-  // Optional: if you previously used client log files
+  users          User[]          @relation("UserProjects")
+  clientLinks    ClientProject[]
   clientLogFiles ClientLogFile[]
 }
 
@@ -218,27 +214,24 @@ model ClientLog {
   request     String?
   response    String?
   amount      Float?
-  attachments Json?           // generic attachments field (e.g., array of urls/metadata)
+  attachments Json?
   status      ClientLogStatus @default(OPEN)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  files ClientLogFile[]        // file entries (Cloudinary etc.)
+  files ClientLogFile[]
 }
 
 // -------------------------------
-//  CLIENT LOG FILES (Cloudinary uploads)
+//  CLIENT LOG FILES
 // -------------------------------
 model ClientLogFile {
   id           String   @id @default(uuid())
-
   log          ClientLog @relation(fields: [logId], references: [id], onDelete: Cascade)
   logId        String
-
   project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   projectId    String?
-
   fileUrl      String
   cloudinaryId String?
   fileName     String
@@ -260,13 +253,13 @@ model ClientAudit {
 }
 
 // -------------------------------
-//  CLIENT <-> EMPLOYEE RELATION
+//  CLIENT <-> EMPLOYEE
 // -------------------------------
 model ClientEmployee {
-  id        String @id @default(uuid())
-  client    Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId  String
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   createdAt DateTime @default(now())
 
@@ -274,7 +267,7 @@ model ClientEmployee {
 }
 
 // -------------------------------
-//  CLIENT <-> PROJECT RELATION
+//  CLIENT <-> PROJECT
 // -------------------------------
 model ClientProject {
   id        String   @id @default(uuid())
@@ -288,15 +281,45 @@ model ClientProject {
 }
 
 // -------------------------------
-//  BIN MODEL (Admin's Diary)
+//  BIN MODEL
 // -------------------------------
 model Bin {
   id        String   @id @default(uuid())
   content   String
   type      BinType
-  date      DateTime? // New field for the calendar view
+  date      DateTime?
   createdAt DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
+}
+
+// -------------------------------
+//  REMINDER MODEL
+// -------------------------------
+model Reminder {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+
+  clientName  String
+  title       String
+  description String?
+  date        DateTime
+  time        String?
+
+  createdAt   DateTime @default(now())
+}
+
+// -------------------------------
+//  PASSWORD RESET TOKENS
+// -------------------------------
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

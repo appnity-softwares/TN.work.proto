@@ -4,13 +4,15 @@ import { BinManagement } from "@/components/admin/bin-management";
 import { redirect } from 'next/navigation';
 
 export default async function AdminBinPage() {
-  const user = await getAuth();
+  const session = await getAuth();
+  const user = session?.user;
+
   if (!user) {
     redirect('/');
   }
 
   if (user.role !== 'ADMIN') {
-      redirect('/dashboard');
+    redirect('/dashboard');
   }
 
   const binItems = await db.bin.findMany({

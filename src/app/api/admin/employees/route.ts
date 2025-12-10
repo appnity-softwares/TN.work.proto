@@ -1,14 +1,13 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+export async function resetPasswordCustom(userId: string, email: string, name: string) {
+  "use server";
 
-export async function GET() {
-  try {
-    const employees = await db.user.findMany({
-      where: { role: 'EMPLOYEE' },
-      select: { id: true, name: true, employeeCode: true },
-    });
-    return NextResponse.json({ employees });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 });
-  }
+  const base = process.env.NEXT_PUBLIC_SITE_URL;
+
+  const res = await fetch(`${base}/api/auth/reset-request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, email, name })
+  });
+
+  return await res.json();
 }

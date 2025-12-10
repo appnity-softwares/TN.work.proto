@@ -6,6 +6,7 @@ import { getNotices, getWorkLogsForUser } from "@/lib/data";
 import { getSession } from "@/lib/session";
 import { User } from "@/lib/types";
 import { NoticeType } from "@prisma/client";
+import { UpcomingMeetings } from '@/components/dashboard/upcoming-meetings';
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -13,21 +14,35 @@ export default async function DashboardPage() {
 
   const workLogs = await getWorkLogsForUser(user.id);
   const allNotices = await getNotices();
-  
-  const relevantNotices = allNotices.filter(n => n.type === NoticeType.PUBLIC || n.targetUserId === user.id);
+
+  const relevantNotices = allNotices.filter(
+    (n) => n.type === NoticeType.PUBLIC || n.targetUserId === user.id
+  );
 
   return (
     <div className="flex flex-col h-full">
       <PageHeader title="My Dashboard" />
+
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+        {/* GRID ROW 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
+
+          <div className="lg:col-span-1 space-y-6">
             <ClockWidget />
+
+            {/* Show A Upcoming Meeting Widget ONLY FOR ADMIN */}
+            {user.role === "ADMIN" && (
+              <UpcomingMeetings days={7} />
+            )}
           </div>
+
           <div className="lg:col-span-2">
             <NoticeBoard notices={relevantNotices} />
           </div>
         </div>
+
+        {/* WORK LOG */}
         <WorkLog initialLogs={workLogs} userId={user.id} />
       </div>
     </div>
