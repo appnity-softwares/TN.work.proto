@@ -236,7 +236,8 @@ export function BinManagement({ initialBinItems }: BinManagementProps) {
         clientName: reminderClientName,
         title: reminderTitle,
         description: reminderDescription || null,
-        date: reminderDate,
+   date: format(reminderDate, "yyyy-MM-dd"),
+
         time: reminderTime || null,
       };
 
@@ -537,7 +538,11 @@ export function BinManagement({ initialBinItems }: BinManagementProps) {
                 ) : (
                   'Save Reminder'
                 )}
+            
+
+                
               </Button>
+              
             </form>
           </CardContent>
         </Card>

@@ -45,7 +45,8 @@ export function MeetingScheduler({ onCreated }: { onCreated?: () => void }) {
         clientName: clientName.trim(),
         title: title.trim(),
         description: description.trim(),
-        date: selectedDate.toISOString(),
+       date: format(selectedDate, "yyyy-MM-dd"),
+
         time: time || null,
         notify: true,
       };
@@ -94,7 +95,16 @@ export function MeetingScheduler({ onCreated }: { onCreated?: () => void }) {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
-                <Calendar selected={selectedDate} onSelect={setSelectedDate} />
+               <Calendar
+  mode="single"
+  selected={selectedDate}
+  onSelect={setSelectedDate}
+  month={selectedDate || new Date()}      // ⭐ allow navigation
+  fromDate={new Date()}                  // ⭐ allow today + future
+  toDate={new Date(2100, 0, 1)}          // ⭐ allow far future
+  disabled={{ before: new Date() }}      // ⭐ disable past only
+/>
+
               </PopoverContent>
             </Popover>
 

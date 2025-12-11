@@ -28,71 +28,88 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate date
-    const scheduledDate = new Date(date);
-    if (isNaN(scheduledDate.getTime())) {
+    // --- FIX #1: Parse date in Indian timezone ---
+    // date format: "YYYY-MM-DD"
+    const [y, m, d] = date.split("-").map(Number);
+
+    // If time exists, use it; otherwise, set 09:00 AM by default
+    let hours = 9, minutes = 0;
+
+    if (time && /^\d{1,2}:\d{2}/.test(time)) {
+      const parts = time.split(":");
+      hours = Number(parts[0]);
+      minutes = Number(parts[1]);
+    }
+
+    // Create IST datetime (not UTC)
+    const scheduledDateIST = new Date(Date.UTC(y, m - 1, d, hours - 5, minutes - 30));
+    // Why hours-5:30? → Converts IST to UTC before saving → so DB stores correct IST moment
+
+    if (isNaN(scheduledDateIST.getTime())) {
       return NextResponse.json({ error: "Invalid date" }, { status: 400 });
     }
 
-    // Prevent past-dated meetings (same-day allowed)
-    const now = new Date();
-    if (scheduledDate < new Date(now.toDateString())) {
+    // --- FIX #2: Prevent past dates based on IST ---
+    const nowUTC = new Date();
+    const nowIST = new Date(nowUTC.getTime() + 5.5 * 60 * 60 * 1000);
+
+    if (scheduledDateIST.getTime() < nowIST.getTime()) {
       return NextResponse.json(
         { error: "Cannot schedule meetings in the past" },
         { status: 400 }
       );
     }
 
-    // Auto-create client if needed
+    // --- Auto-create client if needed ---
     let client = await db.client.findFirst({
-      where: { name: clientName },
+      where: { name: clientName }
     });
 
     if (!client) {
       client = await db.client.create({
-        data: { name: clientName },
+        data: { name: clientName }
       });
     }
 
-    // Create reminder
+    // --- Save reminder (stored in DB as exact IST moment) ---
     const reminder = await db.reminder.create({
       data: {
         userId: user.id,
         clientName,
         title,
         description: description || null,
-        date: scheduledDate,
-        time: time || null,
-      },
+        date: scheduledDateIST,
+        time: time || null
+      }
     });
 
-    // Optional meeting email notification
+    // --- Optional email notification ---
     if (notify && user.email) {
       try {
-        const formattedDate = scheduledDate.toLocaleDateString(undefined, {
+        const formattedDate = scheduledDateIST.toLocaleDateString("en-IN", {
           year: "numeric",
           month: "short",
-          day: "numeric",
+          day: "numeric"
         });
 
         const formattedTime =
           time ||
-          scheduledDate.toLocaleTimeString(undefined, {
+          scheduledDateIST.toLocaleTimeString("en-IN", {
             hour: "2-digit",
-            minute: "2-digit",
+            minute: "2-digit"
           });
 
         await sendMeetingScheduledEmail({
           user: {
             id: user.id,
             name: user.name || "User",
-            email: user.email,
+            email: user.email
           },
           clientName,
           title,
           date: formattedDate,
           time: formattedTime,
-          description: description || "",
+          description: description || ""
         });
       } catch (e) {
         console.error("Failed to send meeting email:", e);
@@ -100,6 +117,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ reminder }, { status: 201 });
+
   } catch (error) {
     console.error("Create reminder error:", error);
     return NextResponse.json(
@@ -109,6 +127,9 @@ export async function POST(req: Request) {
   }
 }
 
+// --------------------------------------------------------------
+// 📌 GET → Fetch reminders (with accurate Indian timezone filtering)
+// --------------------------------------------------------------
 export async function GET(req: Request) {
   try {
     const session = await getAuth();
@@ -123,25 +144,50 @@ export async function GET(req: Request) {
 
     const where: any = { userId: user.id };
 
+    // --------------------------------------------------------------
+    // 🕒 If ?date=YYYY-MM-DD is provided → filter by full IST day
+    // --------------------------------------------------------------
     if (dateParam) {
-      const start = new Date(dateParam);
-      start.setHours(0, 0, 0, 0);
+      const [y, m, d] = dateParam.split("-").map(Number);
 
-      const end = new Date(start);
-      end.setDate(end.getDate() + 1);
+      // Start of day in IST → convert to UTC for DB
+      const startIST = new Date(Date.UTC(y, m - 1, d, -5, -30));
+      const endIST = new Date(Date.UTC(y, m - 1, d + 1, -5, -30));
 
       where.date = {
-        gte: start,
-        lt: end,
+        gte: startIST,
+        lt: endIST
       };
     }
 
+    // --------------------------------------------------------------
+    // 🗂 Fetch reminders
+    // --------------------------------------------------------------
     const reminders = await db.reminder.findMany({
       where,
-      orderBy: { date: "asc" },
+      orderBy: { date: "asc" }
     });
 
-    return NextResponse.json({ reminders }, { status: 200 });
+    // --------------------------------------------------------------
+    // 🕒 Convert stored UTC → IST before returning
+    // --------------------------------------------------------------
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+
+    const formatted = reminders.map((r) => {
+      const ist = new Date(new Date(r.date).getTime() + IST_OFFSET);
+
+      return {
+        ...r,
+        dateIST: ist.toISOString().replace("Z", ""), // useful for UI
+        dateFormatted: ist.toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          hour12: true
+        })
+      };
+    });
+
+    return NextResponse.json({ reminders: formatted }, { status: 200 });
+
   } catch (error) {
     console.error("Fetch reminders error:", error);
     return NextResponse.json(
@@ -150,3 +196,5 @@ export async function GET(req: Request) {
     );
   }
 }
+
+
