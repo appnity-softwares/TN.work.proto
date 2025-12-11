@@ -22,11 +22,12 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { formatISTTime, newDateInIndiaTime } from "@/lib/time";
 
 function safeFormat(date: any) {
   const d = new Date(date);
   if (!date || !isValid(d)) return "—";
-  return format(d, "hh:mm a");
+  return formatISTTime(d);
 }
 
 // ✅ One employee → one latest record
@@ -58,8 +59,8 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"today" | "date">("today");
   const [view, setView] = useState<"table" | "timeline">("table");
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(newDateInIndiaTime());
+  const [currentMonth, setCurrentMonth] = useState(newDateInIndiaTime());
   const [presentDays, setPresentDays] = useState<string[]>([]);
 
   const fetchMonthlyData = async (month: Date) => {
@@ -128,7 +129,7 @@ export default function AttendancePage() {
           <button
             onClick={() => {
               setFilter("today");
-              setSelectedDate(new Date());
+              setSelectedDate(newDateInIndiaTime());
             }}
             className={`px-4 py-2 rounded ${
               filter === "today"
@@ -160,7 +161,7 @@ export default function AttendancePage() {
             <PopoverContent align="start" className="p-0">
               <Calendar
                 mode="single"
-                selected={selectedDate ?? new Date()}
+                selected={selectedDate ?? newDateInIndiaTime()}
                 onSelect={(date) => {
                   if (!date) return;
                   setSelectedDate(date);
@@ -171,8 +172,8 @@ export default function AttendancePage() {
                   present: (day) => presentDaysSet.has(format(day, 'yyyy-MM-dd')),
                   absent: (day) => {
                     const month = startOfMonth(currentMonth);
-                    if (day < month || day > new Date()) return false; // Only for current month
-                    if (isSameDay(day, new Date())) return false; // Today is not absent yet
+                    if (day < month || day > newDateInIndiaTime()) return false; // Only for current month
+                    if (isSameDay(day, newDateInIndiaTime())) return false; // Today is not absent yet
                     return !presentDaysSet.has(format(day, 'yyyy-MM-dd'));
                   }
                 }}

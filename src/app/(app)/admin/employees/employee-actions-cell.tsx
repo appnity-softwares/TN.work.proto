@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { User } from '@prisma/client';
 import { MoreHorizontal } from 'lucide-react';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 import {
   DropdownMenu,
@@ -19,11 +20,13 @@ import {
   suspendUser,
   activateUser,
   unsuspendUser,
-  requestPasswordReset
+  requestPasswordReset,
+  makeAdmin
 } from './actions';
 
 export function EmployeeActionsCell({ employee }: { employee: User }) {
   const [loading, setLoading] = useState(false);
+  const currentUser = useCurrentUser();
 
   const handleDeactivate = async () => {
     if (confirm('Deactivate this user?')) {
@@ -61,6 +64,19 @@ export function EmployeeActionsCell({ employee }: { employee: User }) {
     alert(result.message);
   };
 
+  const handleMakeAdmin = async () => {
+    if (currentUser?.role !== 'SUPERADMIN') {
+        alert("You don't have permission to do this.");
+        return;
+    }
+
+    if (confirm('Make this user an admin?')) {
+      const result = await makeAdmin(employee.id);
+      alert(result.message);
+    }
+  };
+
+
   return (
     <>
       <DropdownMenu>
@@ -94,6 +110,10 @@ export function EmployeeActionsCell({ employee }: { employee: User }) {
             <DropdownMenuItem onClick={handleDeactivate}>Deactivate</DropdownMenuItem>
           ) : (
             <DropdownMenuItem onClick={handleActivate}>Activate</DropdownMenuItem>
+          )}
+
+          {currentUser?.role === 'SUPERADMIN' && employee.role === 'EMPLOYEE' && (
+            <DropdownMenuItem onClick={handleMakeAdmin}>Make Admin</DropdownMenuItem>
           )}
         </DropdownMenuContent>
       </DropdownMenu>

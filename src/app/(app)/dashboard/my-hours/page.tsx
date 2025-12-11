@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Download } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { formatInTimeZone } from "date-fns-tz";
+import { formatISTDate } from "@/lib/time";
 
 export default function MyHoursPage() {
   const [todayHours, setTodayHours] = useState(0);
@@ -116,7 +118,7 @@ export default function MyHoursPage() {
           <CardContent>
             <p className="text-4xl font-bold">{todayHours.toFixed(2)} hrs</p>
             <p className="text-sm text-muted-foreground mt-2">
-              {format(new Date(), "EEEE, MMMM d")}
+              {formatISTDate(new Date())}
             </p>
           </CardContent>
         </Card>

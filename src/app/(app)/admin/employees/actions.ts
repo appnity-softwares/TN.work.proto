@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
+import { getAuth } from "@/lib/auth/get-auth";
 
 import { sendEmail } from "@/lib/email/sendEmail";
 import { resetPasswordEmail } from "@/lib/email/templates/reset";
@@ -138,4 +139,22 @@ export async function activateUser(userId: string) {
 
   revalidatePath("/admin/employees");
   return { success: true, message: "User activated" };
+}
+
+/* --------------------------------
+   MAKE ADMIN
+----------------------------------*/
+export async function makeAdmin(userId: string) {
+    const session = await getAuth();
+    if (session?.user.role !== 'SUPERADMIN') {
+        return { success: false, message: "You don't have permission to do this." };
+    }
+
+    await db.user.update({
+        where: { id: userId },
+        data: { role: "ADMIN" },
+    });
+
+    revalidatePath("/admin/employees");
+    return { success: true, message: "User promoted to Admin" };
 }

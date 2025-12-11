@@ -4,125 +4,82 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Download, Pencil, Lock, UserX } from 'lucide-react';
+import { Download, Pencil, Lock, UserX, FileText } from 'lucide-react';
 import { EmployeeAttendanceCalendar } from "@/components/admin/EmployeeAttendanceCalendar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-/* ========================
-   Safe Date Formatter
-======================== */
+// Helper to safely format dates
 function safeFormat(dateValue: any, pattern = "dd MMM yyyy") {
   if (!dateValue) return "—";
-
   const date = new Date(dateValue);
-
-  if (isNaN(date.getTime())) return "—";
-
-  return format(date, pattern);
+  return isNaN(date.getTime()) ? "—" : format(date, pattern);
 }
 
 export function EmployeeProfile({ user, allAttendance }: any) {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("profile");
+  const [activeSubTab, setActiveSubTab] = useState("overview");
 
   const attendance = user.attendance || [];
   const workLogs = user.workLogs || [];
 
-  // ========= Stats Calculations (Last 30 Days) ==========
+  // Stats Calculations (Last 30 Days)
   const totalDays = attendance.length;
-
   const totalHours = attendance.reduce((acc: number, record: any) => {
     const checkIn = new Date(record.checkIn);
     const checkOut = record.checkOut ? new Date(record.checkOut) : null;
-
     if (isNaN(checkIn.getTime()) || !checkOut) return acc;
-
-    const diff = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-    return acc + diff;
+    return acc + (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
   }, 0);
 
   const avgHours = totalDays ? totalHours / totalDays : 0;
   const absentDays = Math.max(30 - totalDays, 0);
-
-  const mostActiveDay =
-    attendance.length > 0
-      ? safeFormat(attendance[0].checkIn, "EEEE")
-      : "N/A";
-
-  const isWorking =
-    attendance.length > 0 && attendance[0].checkOut === null;
-
+  const mostActiveDay = attendance.length > 0 ? safeFormat(attendance[0].checkIn, "EEEE") : "N/A";
+  const isWorking = attendance.length > 0 && attendance[0].checkOut === null;
   const suspensionReason = user.meta?.suspensionReason;
 
   return (
     <div className="p-2 sm:p-6 space-y-6">
-
-      {/* ======= COVER ======= */}
-      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl p-4 sm:p-6 text-white shadow-lg">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
-              <AvatarImage src={user.avatar || ""} />
-              <AvatarFallback className="text-2xl">
-                {user?.name?.[0] || "U"}
-              </AvatarFallback>
-            </Avatar>
-
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold">{user?.name}</h2>
-              <div className="text-xs sm:text-sm text-white/80">
-                {user?.employeeCode} • {user?.email}
-              </div>
-
-              <div className="flex items-center gap-3 mt-2">
-                <Badge variant={user.status === 'ACTIVE' ? 'default' : user.status === 'SUSPENDED' ? 'secondary' : 'destructive'}>
-                  {user.status}
-                </Badge>
-
-                {isWorking && (
-                  <span className="animate-pulse text-green-300 text-sm">
-                    ● Currently Working
-                  </span>
-                )}
+      {/* Profile Header Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={user.avatar || ""} />
+                <AvatarFallback className="text-2xl">{user?.name?.[0] || "U"}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  {user?.name}
+                  <Badge variant={user.status === 'ACTIVE' ? 'default' : 'destructive'}>{user.status}</Badge>
+                </h2>
+                <p className="text-sm text-muted-foreground">{user.role}</p>
+                <p className="text-sm text-muted-foreground mt-1">{user.mobile || "No mobile number"}</p>
               </div>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Export</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => window.open(`/api/admin/employee/${user.id}/export/pdf`, "_blank")}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.open(`/api/admin/employee/${user.id}/export/csv`, "_blank")}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+        </CardHeader>
+      </Card>
 
-          {/* Actions */}
-          <div className="flex gap-2 sm:gap-3 flex-wrap justify-center">
-            <Button variant="secondary" size="sm">
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-
-            <Button variant="secondary" size="sm">
-              <Lock className="h-4 w-4 mr-2" />
-              Reset Password
-            </Button>
-
-            <Button variant="secondary" size="sm">
-              <UserX className="h-4 w-4 mr-2" />
-              Deactivate
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white text-black"
-              onClick={() =>
-                window.open(`/api/admin/employee/${user.id}/export`, "_blank")
-              }
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export PDF
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* ======= STATS (Last 30 Days) ======= */}
+      {/* Stats (Last 30 Days) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard title="Working Days (30d)" value={totalDays} />
         <StatCard title="Total Hours (30d)" value={totalHours.toFixed(1)} />
@@ -130,88 +87,78 @@ export function EmployeeProfile({ user, allAttendance }: any) {
         <StatCard title="Absent Days (30d)" value={absentDays} />
       </div>
 
-      {/* ======= TABS ======= */}
+      {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 max-w-lg mx-auto">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 max-w-2xl mx-auto">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="worklogs">Work Logs</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
 
-        {/* Overview */}
-        <TabsContent value="overview">
-          <Card className="mt-4">
-            <CardContent className="p-4 sm:p-6 space-y-2">
-              <div><strong>Joined:</strong> {safeFormat(user?.joinDate)}</div>
-              <div><strong>Role:</strong> {user?.role}</div>
-              <div>
-                <strong>Status:</strong>{" "}
-                <Badge
-                  variant={
-                    user.status === "ACTIVE"
-                      ? "default"
-                      : user.status === "SUSPENDED"
-                      ? "secondary"
-                      : "destructive"
-                  }
-                >
-                  {user.status}
-                </Badge>
-              </div>
-              {user.status === "SUSPENDED" && suspensionReason && (
-                <div><strong>Suspension Reason:</strong> {suspensionReason}</div>
-              )}
-            </CardContent>
-          </Card>
+        {/* Profile Tab */}
+        <TabsContent value="profile">
+          <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="mt-4">
+            <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="account">Account</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview">
+              <Card className="mt-4"><CardContent className="p-4 sm:p-6 space-y-2">
+                <div><strong>Status:</strong> <Badge variant={user.status === 'ACTIVE' ? 'default' : 'destructive'}>{user.status}</Badge></div>
+                {user.status === "SUSPENDED" && <div><strong>Suspension Reason:</strong> {suspensionReason}</div>}
+                <div><strong>Role:</strong> {user?.role}</div>
+                <div><strong>Joined:</strong> {safeFormat(user?.joinDate)}</div>
+              </CardContent></Card>
+            </TabsContent>
+            <TabsContent value="details">
+              <Card className="mt-4"><CardContent className="p-4 sm:p-6 space-y-2">
+                <div><strong>Email:</strong> {user?.email}</div>
+                <div><strong>Employee Code:</strong> {user?.employeeCode}</div>
+              </CardContent></Card>
+            </TabsContent>
+            <TabsContent value="account">
+              <Card className="mt-4"><CardContent className="p-4 sm:p-6 space-y-4">
+                <Button variant="outline"><Pencil className="h-4 w-4 mr-2" />Edit Profile</Button>
+                <Button variant="outline"><Lock className="h-4 w-4 mr-2" />Reset Password</Button>
+                <Button variant="destructive"><UserX className="h-4 w-4 mr-2" />Suspend Account</Button>
+              </CardContent></Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
-        {/* Calendar */}
-        <TabsContent value="calendar">
-          <EmployeeAttendanceCalendar
-            attendance={allAttendance}
-            joiningDate={new Date(user.joinDate)}
-          />
+        {/* Attendance Tab */}
+        <TabsContent value="attendance">
+          <EmployeeAttendanceCalendar attendance={allAttendance} joiningDate={new Date(user.joinDate)} />
         </TabsContent>
 
-        {/* Work Logs */}
+        {/* Work Logs Tab */}
         <TabsContent value="worklogs">
-          <Card className="mt-4">
-            <CardContent className="p-4 sm:p-6 space-y-4">
-              {workLogs.length === 0 && (
-                <p className="text-sm text-gray-500">No work logs found.</p>
-              )}
-
-              {workLogs.map((log: any) => (
-                <div key={log.id} className="border rounded-lg p-3 sm:p-4">
-                  <div className="font-semibold text-sm">
-                    {safeFormat(log.date)}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {log.description || "No description"}
-                  </p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <Card className="mt-4"><CardContent className="p-4 sm:p-6 space-y-4">
+            {workLogs.length === 0 ? <p className="text-sm text-gray-500">No work logs found.</p> : workLogs.map((log: any) => (
+              <div key={log.id} className="border rounded-lg p-3 sm:p-4">
+                <div className="font-semibold text-sm">{safeFormat(log.date)}</div>
+                <p className="text-sm text-muted-foreground mt-1">{log.description || "No description"}</p>
+              </div>
+            ))}
+          </CardContent></Card>
         </TabsContent>
 
-        {/* Insights */}
-        <TabsContent value="insights">
-          <Card className="mt-4">
-            <CardContent className="p-4 sm:p-6 space-y-2 text-sm">
-              <div><strong>Most Active Day:</strong> {mostActiveDay}</div>
-              <div><strong>Attendance Trend:</strong> Improving ✅</div>
-              <div><strong>Consistency Score:</strong> 82%</div>
-            </CardContent>
-          </Card>
+        {/* Performance Tab */}
+        <TabsContent value="performance">
+          <Card className="mt-4"><CardContent className="p-4 sm:p-6 space-y-2 text-sm">
+            <div><strong>Most Active Day:</strong> {mostActiveDay}</div>
+            <div><strong>Attendance Trend:</strong> Improving ✅</div>
+            <div><strong>Consistency Score:</strong> 82%</div>
+          </CardContent></Card>
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-/* ===== Reusable Stats Card ===== */
+// Reusable Stats Card
 function StatCard({ title, value }: { title: string; value: any }) {
   return (
     <Card>

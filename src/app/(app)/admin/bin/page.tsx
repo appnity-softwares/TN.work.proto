@@ -1,9 +1,9 @@
 import { getAuth } from "@/lib/auth/get-auth";
 import { db } from "@/lib/db";
-import { BinManagement } from "@/components/admin/bin-management";
 import { redirect } from 'next/navigation';
+import { AdminBinPage } from "@/components/admin/bin-page";
 
-export default async function AdminBinPage() {
+export default async function AdminBinRoute() {
   const session = await getAuth();
   const user = session?.user;
 
@@ -20,5 +20,5 @@ export default async function AdminBinPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  return <BinManagement initialBinItems={binItems} />;
+  return <AdminBinPage initialBinItems={binItems} />;
 }

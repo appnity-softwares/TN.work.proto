@@ -37,4 +37,5 @@ export type UserWithMeta = PrismaUser & {
         emergencyContact?: string;
         detailsApproved?: boolean;
     } | null;
+    email: string | null;
 };

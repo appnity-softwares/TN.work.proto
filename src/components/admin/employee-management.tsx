@@ -29,12 +29,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { User } from '@/lib/types';
 import { Role } from '@prisma/client';
-import { PlusCircle, Users, Crown, User as UserIcon, Edit, KeyRound, UserX, Ban } from 'lucide-react';
+import { PlusCircle, Users, Crown, User as UserIcon, Edit, KeyRound, UserX, Ban, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { createUser } from '@/app/api/admin-actions';
+import { requestEmployeeDetailsUpdate } from '@/app/api/employee-actions';
 
 import {
   Select,
@@ -50,6 +51,7 @@ import { AlertTriangle } from 'lucide-react';
 import {
   deactivateUser,
   suspendUser,
+  requestPasswordReset,
 } from '@/app/(app)/admin/employees/actions';
 
 import { Textarea } from '@/components/ui/textarea';
@@ -65,7 +67,7 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'role' | 'code'>('name');
-  const [actionTarget, setActionTarget] = useState<{ user: User; action: 'deactivate' | 'reset' | 'suspend' } | null>(null);
+  const [actionTarget, setActionTarget] = useState<{ user: User; action: 'deactivate' | 'reset' | 'suspend' | 'edit' } | null>(null);
   const [suspensionReason, setSuspensionReason] = useState('');
 
   const [createUserState, formAction] = useActionState(createUser, initialState);
@@ -87,13 +89,13 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
     let result: { success: boolean; message?: string } | undefined;
 
     if (actionTarget.action === 'deactivate') {
-    if (actionTarget.action === 'deactivate') {
       result = await deactivateUser(actionTarget.user.id);
     } else if (actionTarget.action === 'reset') {
-      // TODO: Implement password reset functionality
-      result = { success: true, message: 'Password reset initiated' };
+      result = await requestPasswordReset(actionTarget.user.id);
     } else if (actionTarget.action === 'suspend') {
       result = await suspendUser(actionTarget.user.id, suspensionReason);
+    } else if (actionTarget.action === 'edit') {
+      result = await requestEmployeeDetailsUpdate(actionTarget.user.id);
     }
     if (result && result.success) {
       toast({ title: 'Success', description: result.message });
@@ -278,10 +280,21 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
                     </TableCell>
 
                     <TableCell className="flex gap-1 sm:gap-2">
+                       <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => router.push(`/admin/employees/${user.id}`)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => router.push(`/admin/employees/${user.id}/edit`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActionTarget({ user, action: 'edit' });
+                        }}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -321,7 +334,7 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
                         <UserX className="text-destructive h-4 w-4" />
                       </Button>
                     </TableCell>
-                  </TableRow>  
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>
@@ -334,11 +347,13 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
           <DialogHeader>
             <DialogTitle>Confirm Action</DialogTitle>
             <DialogDescription>
-              Are you sure you want to {actionTarget?.action}{' '}
-              <strong>{actionTarget?.user.name}</strong>'s account?
-              {actionTarget?.action === 'reset' &&
-                " Their password will be reset to 'password'."}
-            </DialogDescription>
+  Are you sure you want to {
+    actionTarget?.action === 'edit' 
+      ? `send an email to ${actionTarget.user.name} to edit their details?`
+      : `${actionTarget?.action} ${actionTarget?.user.name}'s account?`
+  }
+  {actionTarget?.action === 'reset' && " A password reset link will be sent to their email."}
+</DialogDescription>
           </DialogHeader>
 
           {actionTarget?.action === 'suspend' && (
@@ -373,5 +388,4 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
       </Dialog>
     </Card>
   );
-}
 }

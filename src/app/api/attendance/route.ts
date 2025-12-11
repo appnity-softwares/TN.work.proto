@@ -1,6 +1,7 @@
 import { db as prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { format } from "date-fns";
+import { newDateInIndiaTime } from "@/lib/time";
 
 // ---------------------------------------
 // ✅ POST — Clock In / Clock Out
@@ -12,11 +13,22 @@ export async function POST(req: Request) {
   }
 
   const userId = session.user.id;
-  const { type } = await req.json(); // "checkin" | "checkout"
+  let type;
+  try {
+    const body = await req.json();
+    type = body.type;
+  } catch (e) {
+    type = 'checkout';
+  }
+
+  if (type === undefined) {
+    type = 'checkout';
+  }
+
 
   if (type === "checkin") {
     const record = await prisma.attendance.create({
-      data: { userId, checkIn: new Date() },
+      data: { userId, checkIn: newDateInIndiaTime() },
     });
 
     return Response.json(
@@ -33,14 +45,14 @@ export async function POST(req: Request) {
 
     if (!last) {
       return Response.json(
-        { error: "No active session to check out from." },
-        { status: 400 }
+        { status: "already_checked_out" },
+        { status: 200 }
       );
     }
 
     const record = await prisma.attendance.update({
       where: { id: last.id },
-      data: { checkOut: new Date() },
+      data: { checkOut: newDateInIndiaTime() },
     });
 
     return Response.json({ status: "checked_out", record });
@@ -59,7 +71,7 @@ export async function GET() {
 
   const userId = session.user.id;
 
-  const now = new Date();
+  const now = newDateInIndiaTime();
   const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
   weekStart.setHours(0, 0, 0, 0);
 
@@ -80,8 +92,8 @@ export async function GET() {
   }
 
   for (const r of records) {
-    const key = format(new Date(r.checkIn), "EEEE");
-    const checkOut = r.checkOut ?? new Date();
+    const key = format(newDateInIndiaTime(), "EEEE");
+    const checkOut = r.checkOut ?? newDateInIndiaTime();
     const ms = new Date(checkOut).getTime() - new Date(r.checkIn).getTime();
     days[key] += ms;
   }

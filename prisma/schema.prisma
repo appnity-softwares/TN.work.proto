@@ -1,19 +1,49 @@
-// -------------------------------
-//  DATABASE CONFIG
-// -------------------------------
+
+datasource db {
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+model User {
+  id            String    @id @default(cuid()) 
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(EMPLOYEE)
+
+  // Passcode instead of Password
+  passcode String?
+
+  // Employee-specific fields
+  employeeCode String?   @unique
+  status       UserStatus? @default(ACTIVE)
+  isClockedIn  Boolean   @default(false)
+  lastClockIn  DateTime?
+  hours        Json?
+  meta         Json?
+
+  accounts Account[]
+
+  // TaskNity specific relations
+  sessions      Session[]
+  logs          Log[]
+  notices       Notice[]
+  recipients    Recipient[]
+  reminders     Reminder[]
+  meetings      Meeting[]
+  passwordResetPasswordResetToken[]
+  editTokens    EditToken[] // Relation to EditToken
+  Bin           Bin[]
 }
 
-// -------------------------------
-//  ENUMS
-// -------------------------------
 enum Role {
+  SUPERADMIN
   ADMIN
   EMPLOYEE
 }
@@ -24,302 +54,146 @@ enum UserStatus {
   SUSPENDED
 }
 
-enum NoticeType {
-  PUBLIC
-  PRIVATE
-  WARNING
+model Account {
+  id                String  @id @default(cuid()) 
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
 }
 
-enum ClientStatus {
-  ACTIVE
-  ON_HOLD
-  CLOSED
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-enum ClientLogStatus {
-  OPEN
-  IN_PROGRESS
-  RESOLVED
-  CANCELLED
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
-enum BinType {
-  NOTE
-  TODO
-  IDEA
-}
-
-// -------------------------------
-//  USER MODEL (Admin + Employees)
-// -------------------------------
-model User {
-  id             String     @id @default(uuid())
-  name           String
-  email          String?    @unique
-  employeeCode   String     @unique
-  hashedPasscode String
-  role           Role       @default(EMPLOYEE)
-  status         UserStatus @default(ACTIVE)
-  joinDate       DateTime   @default(now())
-  meta           Json?      
- avatar         String?
- 
-  attendance        Attendance[]
-  workLogs          WorkLog[]
-  noticesIssued     Notice[]          @relation("AdminIssuedNotices")
-  noticesReceived   Notice[]          @relation("UserNotices")
-  errorLogs         ErrorLog[]
-  projects          Project[]         @relation("UserProjects")
-  discussionPosts   DiscussionPost[]
-  discussionReplies DiscussionReply[]
-  bins              Bin[]
-  reminders         Reminder[]
-  clientAssignments ClientEmployee[]
-  createdClientLogs ClientLog[]       @relation("UserClientLogs")
-
-  passwordResetTokens PasswordResetToken[]   // <── add this
-}
-
-// -------------------------------
-//  ATTENDANCE MODEL
-// -------------------------------
-model Attendance {
-  id       String    @id @default(uuid())
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId   String
-  checkIn  DateTime
-  checkOut DateTime?
-}
-
-// -------------------------------
-//  WORK LOG MODEL
-// -------------------------------
-model WorkLog {
-  id          String   @id @default(uuid())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  date        DateTime @default(now())
-  description String
-  metadata    Json?
-}
-
-// -------------------------------
-//  NOTICE MODEL (Admin → Employee)
-// -------------------------------
-model Notice {
-  id       String @id @default(uuid())
-
-  issuedBy User   @relation("AdminIssuedNotices", fields: [adminId], references: [id], onDelete: Cascade)
-  adminId  String
-
-  targetUserId String? // null = public notice
-  targetUser   User?   @relation("UserNotices", fields: [targetUserId], references: [id], onDelete: SetNull)
-
-  type      NoticeType @default(PUBLIC)
-  title     String
-  message   String
-  createdAt DateTime   @default(now())
-}
-
-// -------------------------------
-//  ERROR LOG MODEL
-// -------------------------------
-model ErrorLog {
-  id         String   @id @default(uuid())
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId     String?
-  route      String
-  message    String
-  stacktrace String?
-  metadata   Json?
-  timestamp  DateTime @default(now())
-}
-
-// -------------------------------
-//  PROJECT MODEL (For /api/admin/allprojects)
-// -------------------------------
-model Project {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-
-  users          User[]          @relation("UserProjects")
-  clientLinks    ClientProject[]
-  clientLogFiles ClientLogFile[]
-}
-
-// -------------------------------
-//  DISCUSSION MODELS
-// -------------------------------
-model DiscussionPost {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
-
-  replies DiscussionReply[]
-}
-
-model DiscussionReply {
-  id        String   @id @default(uuid())
-  content   String
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
-
-  post   DiscussionPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId String
-}
-
-// -------------------------------
-//  CLIENT MODEL
-// -------------------------------
-model Client {
-  id           String        @id @default(uuid())
-  name         String
-  companyName  String?
-  contactEmail String?
-  contactPhone String?
-  funds        Float?
-  objective    String?
-  notes        String?
-  status       ClientStatus  @default(ACTIVE)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  employees ClientEmployee[]
-  projects  ClientProject[]
-  logs      ClientLog[]
-  audits    ClientAudit[]
-}
-
-// -------------------------------
-//  CLIENT LOG MODEL
-// -------------------------------
-model ClientLog {
-  id          String          @id @default(uuid())
-  client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId    String
-
-  createdBy   User?           @relation("UserClientLogs", fields: [createdById], references: [id], onDelete: SetNull)
-  createdById String?
-
-  objective   String?
-  demand      String?
-  request     String?
-  response    String?
-  amount      Float?
-  attachments Json?
-  status      ClientLogStatus @default(OPEN)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  files ClientLogFile[]
-}
-
-// -------------------------------
-//  CLIENT LOG FILES
-// -------------------------------
-model ClientLogFile {
-  id           String   @id @default(uuid())
-  log          ClientLog @relation(fields: [logId], references: [id], onDelete: Cascade)
-  logId        String
-  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  projectId    String?
-  fileUrl      String
-  cloudinaryId String?
-  fileName     String
-  fileType     String
-  createdAt    DateTime @default(now())
-}
-
-// -------------------------------
-//  CLIENT AUDIT MODEL
-// -------------------------------
-model ClientAudit {
-  id        String   @id @default(uuid())
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId  String
-  action    String
-  changedBy String?
-  data      Json?
-  createdAt DateTime @default(now())
-}
-
-// -------------------------------
-//  CLIENT <-> EMPLOYEE
-// -------------------------------
-model ClientEmployee {
-  id        String   @id @default(uuid())
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId  String
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  createdAt DateTime @default(now())
-
-  @@unique([clientId, userId])
 }
 
-// -------------------------------
-//  CLIENT <-> PROJECT
-// -------------------------------
-model ClientProject {
-  id        String   @id @default(uuid())
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId  String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId String
-  createdAt DateTime @default(now())
-
-  @@unique([clientId, projectId])
+// Add the new EditToken model
+model EditToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expires   DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// -------------------------------
-//  BIN MODEL
-// -------------------------------
-model Bin {
-  id        String   @id @default(uuid())
+
+// App specific models
+
+// User work logs
+model Log {
+  id        String   @id @default(cuid())
   content   String
-  type      BinType
-  date      DateTime?
   createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meta      Json?
 }
 
-// -------------------------------
-//  REMINDER MODEL
-// -------------------------------
-model Reminder {
-  id          String   @id @default(uuid())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
+// Admin notices
+model Notice {
+  id        String      @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  isPublic  Boolean     @default(true)
+  meta      Json?
+  recipients Recipient[]
+}
 
-  clientName  String
+model Recipient {
+  id       String @id @default(cuid())
+  noticeId String
+  userId   String
+  isRead   Boolean @default(false)
+  notice   Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noticeId, userId])
+}
+
+// Error logging
+model ErrorLog {
+  id        String   @id @default(cuid())
+  message   String
+  stack     String?
+  component String?
+  createdAt DateTime @default(now())
+}
+
+model Reminder {
+  id          String   @id @default(cuid())
   title       String
   description String?
   date        DateTime
-  time        String?
-
+  isRecurring Boolean  @default(false)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
 }
 
-// -------------------------------
-//  PASSWORD RESET TOKENS
-// -------------------------------
-model PasswordResetToken {
-  id        String   @id @default(uuid())
+model Meeting {
+  id        String   @id @default(cuid()) 
+  title     String
+  date      DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   userId    String
-  token     String   @unique
-  expiresAt DateTime
-  used      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Bin {
+  id        String   @id @default(cuid()) 
+  type      String
+  content   String
+  date      DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meta      Json?
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  reminders Reminder[]
 }
