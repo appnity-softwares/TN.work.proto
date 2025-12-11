@@ -3,10 +3,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuth } from "@/lib/auth/get-auth";
 
-/**
- * Returns an .ics text for the reminder id
- */
-
 function escapeICSText(s: string) {
   return s.replace(/(\r\n|\n|\r)/g, "\\n").replace(/,/g, "\\,");
 }
@@ -14,38 +10,49 @@ function escapeICSText(s: string) {
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getAuth();
-    if (!session || session.role !== "ADMIN") {
+    if (!session || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const id = params.id;
-    const rem = await db.reminder.findUnique({ where: { id } });
-    if (!rem) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (rem.userId !== session.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const reminder = await db.reminder.findUnique({ where: { id } });
 
-    const start = new Date(rem.date);
-    // If time present and parseable, try to merge time (time string like "15:30" or "3:30 PM")
-    let startUTC = start;
-    if (rem.time) {
-      // attempt to parse HH:MM (24h)
-      const m = rem.time.match(/^(\d{1,2}):(\d{2})/);
-      if (m) {
-        const d = new Date(start);
-        d.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0);
+    if (!reminder) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    // Ensure admin can only access their own reminders
+    if (reminder.userId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Parse date + time
+    const date = new Date(reminder.date);
+    let startUTC = date;
+
+    if (reminder.time) {
+      const match = reminder.time.match(/^(\d{1,2}):(\d{2})/);
+      if (match) {
+        const d = new Date(date);
+        d.setHours(parseInt(match[1]), parseInt(match[2]), 0, 0);
         startUTC = d;
       }
     }
 
-    const end = new Date(startUTC.getTime() + 60 * 60 * 1000); // default 1 hour event
+    const end = new Date(startUTC.getTime() + 60 * 60 * 1000);
 
-    const uid = `tasknity-reminder-${rem.id}@tasknity`;
-    const dtstamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-    const dtstart = startUTC.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-    const dtend = end.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-
-    const summary = escapeICSText(rem.title);
-    const description = escapeICSText(`${rem.description || ""}\nClient: ${rem.clientName}`);
-    const location = escapeICSText(rem.clientName);
+    const dtstamp = new Date()
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .split(".")[0] + "Z";
+    const dtstart = startUTC
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .split(".")[0] + "Z";
+    const dtend = end
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .split(".")[0] + "Z";
 
     const ics = [
       "BEGIN:VCALENDAR",
@@ -54,13 +61,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       "BEGIN:VEVENT",
-      `UID:${uid}`,
+      `UID:tasknity-reminder-${reminder.id}@tasknity`,
       `DTSTAMP:${dtstamp}`,
       `DTSTART:${dtstart}`,
       `DTEND:${dtend}`,
-      `SUMMARY:${summary}`,
-      `DESCRIPTION:${description}`,
-      `LOCATION:${location}`,
+      `SUMMARY:${escapeICSText(reminder.title)}`,
+      `DESCRIPTION:${escapeICSText(
+        `${reminder.description || ""}\nClient: ${reminder.clientName}`
+      )}`,
+      `LOCATION:${escapeICSText(reminder.clientName)}`,
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");
@@ -69,11 +78,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       status: 200,
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
-        "Content-Disposition": `attachment; filename=meeting-${rem.id}.ics`,
+        "Content-Disposition": `attachment; filename=meeting-${reminder.id}.ics`,
       },
     });
   } catch (err) {
-    console.error("ICS error:", err);
+    console.error("ICS Error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

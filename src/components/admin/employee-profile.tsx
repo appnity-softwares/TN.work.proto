@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Download, Pencil, Lock, UserX } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
+import { EmployeeAttendanceCalendar } from "@/components/admin/EmployeeAttendanceCalendar";
 
 /* ========================
    Safe Date Formatter
@@ -77,7 +77,9 @@ export function EmployeeProfile({ user, allAttendance }: any) {
               </div>
 
               <div className="flex items-center gap-3 mt-2">
-                 <Badge variant={user.status === 'ACTIVE' ? 'default' : user.status === 'SUSPENDED' ? 'secondary' : 'destructive'}>{user.status}</Badge>
+                <Badge variant={user.status === 'ACTIVE' ? 'default' : user.status === 'SUSPENDED' ? 'secondary' : 'destructive'}>
+                  {user.status}
+                </Badge>
 
                 {isWorking && (
                   <span className="animate-pulse text-green-300 text-sm">
@@ -110,10 +112,7 @@ export function EmployeeProfile({ user, allAttendance }: any) {
               variant="outline"
               className="bg-white text-black"
               onClick={() =>
-                window.open(
-                  `/api/admin/employee/${user.id}/export`,
-                  "_blank"
-                )
+                window.open(`/api/admin/employee/${user.id}/export`, "_blank")
               }
             >
               <Download className="h-4 w-4 mr-2" />
@@ -123,7 +122,7 @@ export function EmployeeProfile({ user, allAttendance }: any) {
         </div>
       </div>
 
-      {/* ======= STATS (Last 30 days) ======= */}
+      {/* ======= STATS (Last 30 Days) ======= */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard title="Working Days (30d)" value={totalDays} />
         <StatCard title="Total Hours (30d)" value={totalHours.toFixed(1)} />
@@ -146,17 +145,33 @@ export function EmployeeProfile({ user, allAttendance }: any) {
             <CardContent className="p-4 sm:p-6 space-y-2">
               <div><strong>Joined:</strong> {safeFormat(user?.joinDate)}</div>
               <div><strong>Role:</strong> {user?.role}</div>
-                <div><strong>Status:</strong> <Badge variant={user.status === 'ACTIVE' ? 'default' : user.status === 'SUSPENDED' ? 'secondary' : 'destructive'}>{user.status}</Badge></div>
-                {user.status === 'SUSPENDED' && suspensionReason && (
-                    <div><strong>Suspension Reason:</strong> {suspensionReason}</div>
-                )}
+              <div>
+                <strong>Status:</strong>{" "}
+                <Badge
+                  variant={
+                    user.status === "ACTIVE"
+                      ? "default"
+                      : user.status === "SUSPENDED"
+                      ? "secondary"
+                      : "destructive"
+                  }
+                >
+                  {user.status}
+                </Badge>
+              </div>
+              {user.status === "SUSPENDED" && suspensionReason && (
+                <div><strong>Suspension Reason:</strong> {suspensionReason}</div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Calendar */}
         <TabsContent value="calendar">
-            <Calendar attendance={allAttendance} joiningDate={new Date(user.joinDate)} />
+          <EmployeeAttendanceCalendar
+            attendance={allAttendance}
+            joiningDate={new Date(user.joinDate)}
+          />
         </TabsContent>
 
         {/* Work Logs */}

@@ -15,10 +15,14 @@ import {
   Ban,
   CheckCircle,
 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
 
-import { requestPasswordReset } from "@/app/(app)/admin/employees/actions";
-import { suspendUser, unsuspendUser, activateUser } from "@/app/(app)/admin/employees/actions";
+import { AttendanceCalendar } from "@/components/admin/AttendanceCalendar";
+
+import {
+  suspendUser,
+  unsuspendUser,
+  activateUser,
+} from "@/app/(app)/admin/employees/actions";
 
 import { ResetPasswordModal } from "@/components/admin/ResetPasswordModal";
 
@@ -91,7 +95,7 @@ export function EmployeeProfile({ user, allAttendance }: any) {
   };
 
   /* ======================================
-      Render
+      RENDER
   ====================================== */
   return (
     <div className="p-4 sm:p-7 space-y-7 max-w-5xl mx-auto">
@@ -139,47 +143,29 @@ export function EmployeeProfile({ user, allAttendance }: any) {
             </div>
           </div>
 
-          {/* ======================================
-              ACTION BUTTONS
-          ====================================== */}
+          {/* ACTION BUTTONS */}
           <div className="flex flex-wrap gap-2 justify-center">
 
-            {/* Edit */}
             <Button variant="secondary" size="sm">
               <Pencil className="h-4 w-4 mr-2" /> Edit
             </Button>
 
-            {/* Reset Password (Modal) */}
             <Button variant="secondary" size="sm" onClick={handlePasswordReset}>
               <Lock className="h-4 w-4 mr-2" /> Send Reset Link
             </Button>
 
-            {/* Suspend / Unsuspend */}
             {user.status === "SUSPENDED" ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleUnsuspend}
-              >
+              <Button variant="secondary" size="sm" onClick={handleUnsuspend}>
                 <CheckCircle className="h-4 w-4 mr-2" /> Unsuspend
               </Button>
             ) : (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleSuspend}
-              >
+              <Button variant="secondary" size="sm" onClick={handleSuspend}>
                 <Ban className="h-4 w-4 mr-2" /> Suspend
               </Button>
             )}
 
-            {/* Activate / Deactivate */}
             {user.status === "INACTIVE" ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleActivate}
-              >
+              <Button variant="secondary" size="sm" onClick={handleActivate}>
                 <CheckCircle className="h-4 w-4 mr-2" /> Activate
               </Button>
             ) : (
@@ -188,7 +174,6 @@ export function EmployeeProfile({ user, allAttendance }: any) {
               </Button>
             )}
 
-            {/* Export PDF */}
             <Button
               size="sm"
               variant="outline"
@@ -203,9 +188,7 @@ export function EmployeeProfile({ user, allAttendance }: any) {
         </div>
       </div>
 
-      {/* ======================================
-          STATS GRID
-      ====================================== */}
+      {/* STATS GRID */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard title="Working Days (30d)" value={totalDays} />
         <StatCard title="Total Hours (30d)" value={totalHours.toFixed(1)} />
@@ -213,9 +196,7 @@ export function EmployeeProfile({ user, allAttendance }: any) {
         <StatCard title="Absent Days" value={absentDays} />
       </div>
 
-      {/* ======================================
-          TABS SECTION
-      ====================================== */}
+      {/* TABS SECTION */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 max-w-lg mx-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -230,15 +211,18 @@ export function EmployeeProfile({ user, allAttendance }: any) {
             <CardContent className="p-6 space-y-2">
               <p><strong>Joined:</strong> {safeFormat(user.joinDate)}</p>
               <p><strong>Role:</strong> {user.role}</p>
+
               <p>
                 <strong>Status:</strong>{" "}
-                <Badge variant={
-                  user.status === "ACTIVE"
-                    ? "default"
-                    : user.status === "SUSPENDED"
-                    ? "secondary"
-                    : "destructive"
-                }>
+                <Badge
+                  variant={
+                    user.status === "ACTIVE"
+                      ? "default"
+                      : user.status === "SUSPENDED"
+                      ? "secondary"
+                      : "destructive"
+                  }
+                >
                   {user.status}
                 </Badge>
               </p>
@@ -252,7 +236,7 @@ export function EmployeeProfile({ user, allAttendance }: any) {
 
         {/* Calendar */}
         <TabsContent value="calendar">
-          <Calendar
+          <AttendanceCalendar
             attendance={allAttendance}
             joiningDate={new Date(user.joinDate)}
           />

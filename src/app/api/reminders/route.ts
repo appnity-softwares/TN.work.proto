@@ -5,14 +5,16 @@ import { getAuth } from "@/lib/auth/get-auth";
 import { sendMeetingScheduledEmail } from "@/lib/email/hooks";
 
 /**
- * POST -> create a reminder (auto-create client if missing)
- * GET  -> list reminders for optional date (query ?date=YYYY-MM-DD)
+ * POST → create a reminder (auto-create client if missing)
+ * GET  → list reminders (optional ?date=YYYY-MM-DD)
  */
 
 export async function POST(req: Request) {
   try {
     const session = await getAuth();
-    if (!session || session.role !== "ADMIN") {
+    const user = session?.user;
+
+    if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -20,35 +22,42 @@ export async function POST(req: Request) {
     const { clientName, title, description, date, time, notify = true } = body;
 
     if (!clientName || !title || !date) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
-    // Ensure date is parseable
+    // Validate date
     const scheduledDate = new Date(date);
     if (isNaN(scheduledDate.getTime())) {
       return NextResponse.json({ error: "Invalid date" }, { status: 400 });
     }
 
-    // Do not allow scheduling in the past (allow same-day future time)
+    // Prevent past-dated meetings (same-day allowed)
     const now = new Date();
     if (scheduledDate < new Date(now.toDateString())) {
-      return NextResponse.json({ error: "Cannot schedule meetings in the past" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Cannot schedule meetings in the past" },
+        { status: 400 }
+      );
     }
 
-    // Auto-create client if not exists (create minimal record)
-    let client = await db.client.findFirst({ where: { name: clientName } });
+    // Auto-create client if needed
+    let client = await db.client.findFirst({
+      where: { name: clientName },
+    });
+
     if (!client) {
       client = await db.client.create({
-        data: {
-          name: clientName,
-        },
+        data: { name: clientName },
       });
     }
 
     // Create reminder
     const reminder = await db.reminder.create({
       data: {
-        userId: session.id,
+        userId: user.id,
         clientName,
         title,
         description: description || null,
@@ -57,15 +66,28 @@ export async function POST(req: Request) {
       },
     });
 
-    // Send meeting email to the creator (admin) if notify true & email exists
-    if (notify && session.email) {
+    // Optional meeting email notification
+    if (notify && user.email) {
       try {
-        // Format date/time for email
-        const formattedDate = scheduledDate.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-        const formattedTime = time || scheduledDate.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+        const formattedDate = scheduledDate.toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+
+        const formattedTime =
+          time ||
+          scheduledDate.toLocaleTimeString(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
 
         await sendMeetingScheduledEmail({
-          user: { id: session.id, name: session.name, email: session.email },
+          user: {
+            id: user.id,
+            name: user.name || "User",
+            email: user.email,
+          },
           clientName,
           title,
           date: formattedDate,
@@ -80,29 +102,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ reminder }, { status: 201 });
   } catch (error) {
     console.error("Create reminder error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
 export async function GET(req: Request) {
   try {
     const session = await getAuth();
-    if (!session || session.role !== "ADMIN") {
+    const user = session?.user;
+
+    if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const url = new URL(req.url);
-    const dateParam = url.searchParams.get("date"); // optional
+    const dateParam = url.searchParams.get("date");
 
-    const where: any = { userId: session.id };
+    const where: any = { userId: user.id };
 
     if (dateParam) {
-      // match that date (midnight..next day)
       const start = new Date(dateParam);
       start.setHours(0, 0, 0, 0);
+
       const end = new Date(start);
       end.setDate(end.getDate() + 1);
-      where.date = { gte: start, lt: end };
+
+      where.date = {
+        gte: start,
+        lt: end,
+      };
     }
 
     const reminders = await db.reminder.findMany({
@@ -113,6 +144,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ reminders }, { status: 200 });
   } catch (error) {
     console.error("Fetch reminders error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

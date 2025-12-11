@@ -10,15 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default async function AdminRemindersPage() {
-  const user = await getAuth();
-  if (!user) redirect("/");
+  const session = await getAuth();
+  if (!session || !session.user) redirect("/");
+
+  const user = session.user; // <-- FIX
+
   if (user.role !== "ADMIN") redirect("/dashboard");
 
   const reminders = await db.reminder.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id },  // <-- NOW works
     orderBy: { date: "desc" },
     take: 50,
   });
+
 
   async function deleteReminder(formData: FormData) {
     "use server";

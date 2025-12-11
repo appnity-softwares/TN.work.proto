@@ -4,14 +4,16 @@ import { db } from "@/lib/db";
 import { getAuth } from "@/lib/auth/get-auth";
 
 /**
- * GET -> upcoming reminders (default next 7 days)
+ * GET → upcoming reminders (default next 7 days)
  * Optional query: ?days=30
  */
 
 export async function GET(req: Request) {
   try {
     const session = await getAuth();
-    if (!session || session.role !== "ADMIN") {
+    const user = session?.user;
+
+    if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -28,7 +30,7 @@ export async function GET(req: Request) {
 
     const upcoming = await db.reminder.findMany({
       where: {
-        userId: session.id,
+        userId: user.id,
         date: { gte: start, lte: end },
       },
       orderBy: { date: "asc" },
@@ -38,6 +40,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ upcoming }, { status: 200 });
   } catch (error) {
     console.error("Upcoming reminders error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

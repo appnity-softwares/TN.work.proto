@@ -15,7 +15,7 @@ export async function GET(req: Request, context: RouteContext) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { id } = context.params;
+  const { id } = await context.params;
   console.log("📍 Fetching client:", id);
 
   const client = await prisma.client.findUnique({

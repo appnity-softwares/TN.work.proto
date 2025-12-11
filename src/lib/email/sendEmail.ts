@@ -3,7 +3,6 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Default sender identity
 const FROM_ADDRESS = "TaskNity <tasknity@resender.dev>";
 
 export interface EmailPayload {
@@ -29,9 +28,10 @@ export async function sendEmail({ to, subject, html, cc, bcc }: EmailPayload) {
       bcc,
     });
 
+    // FIX: Resend v3 returns: { data: { id }, error }
     return {
       success: true,
-      id: response.id ?? null,
+      id: response.data?.id || null,
     };
   } catch (error: any) {
     console.error("Email sending failed:", error);

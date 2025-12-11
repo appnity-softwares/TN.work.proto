@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { randomBytes } from "crypto";
-import { sendEmail } from "@/lib/email/send";
-import { passwordResetTemplate } from "@/lib/email/templates/password-reset";
+import { sendEmail } from "@/lib/email/sendEmail";
+import { resetPasswordEmail } from "@/lib/email/templates/reset";
+import { getBaseUrl } from "@/lib/getBaseUrl";
 
 export async function POST(req: Request) {
   try {
     const { userId, email, name } = await req.json();
 
-    if (!userId || !email) return NextResponse.json({ error: "Missing data" }, { status: 400 });
+    if (!userId || !email) {
+      return NextResponse.json({ error: "Missing data" }, { status: 400 });
+    }
 
     const token = randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + 30 * 60 * 1000); // 30 min
@@ -21,17 +24,26 @@ export async function POST(req: Request) {
       },
     });
 
-    const link = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password?token=${token}`;
+    const link = `${getBaseUrl()}/reset-password/${token}`;
 
-    await sendEmail(
-      email,
-      "Reset Your TaskNity Password",
-      passwordResetTemplate(name, link)
-    );
+    await sendEmail({
+      to: email,
+      subject: "Reset Your TaskNity Password",
+      html: resetPasswordEmail({
+        name,
+        link,
+      }),
+    });
 
-    return NextResponse.json({ success: true, message: "Reset link sent to email." });
+    return NextResponse.json({
+      success: true,
+      message: "Reset link sent to email.",
+    });
   } catch (error) {
     console.error("Reset request failed:", error);
-    return NextResponse.json({ success: false, message: "Could not send reset link." });
+    return NextResponse.json({
+      success: false,
+      message: "Could not send reset link.",
+    });
   }
 }

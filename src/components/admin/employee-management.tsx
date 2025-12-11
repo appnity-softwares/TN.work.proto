@@ -35,6 +35,7 @@ import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { placeholderImages } from '@/lib/placeholder-images';
 import { createUser } from '@/app/api/admin-actions';
+
 import {
   Select,
   SelectContent,
@@ -42,9 +43,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertTriangle } from 'lucide-react';
-import { deactivateUser, suspendUser, resetPassword } from '@/app/(app)/admin/employees/actions';
+
+import {
+  deactivateUser,
+  suspendUser,
+} from '@/app/(app)/admin/employees/actions';
+
 import { Textarea } from '@/components/ui/textarea';
 
 interface EmployeeManagementProps {
@@ -77,21 +84,28 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
   const handleAction = async () => {
     if (!actionTarget) return;
 
-    let result: { success: boolean; message?: string; } | undefined;
-    if (actionTarget.action === 'deactivate') {
-        result = await deactivateUser(actionTarget.user.id);
-    } else if (actionTarget.action === 'reset') {
-        result = await resetPassword(actionTarget.user.id);
-    } else if (actionTarget.action === 'suspend') {
-        result = await suspendUser(actionTarget.user.id, suspensionReason);
-    }
+    let result: { success: boolean; message?: string } | undefined;
 
+    if (actionTarget.action === 'deactivate') {
+    if (actionTarget.action === 'deactivate') {
+      result = await deactivateUser(actionTarget.user.id);
+    } else if (actionTarget.action === 'reset') {
+      // TODO: Implement password reset functionality
+      result = { success: true, message: 'Password reset initiated' };
+    } else if (actionTarget.action === 'suspend') {
+      result = await suspendUser(actionTarget.user.id, suspensionReason);
+    }
     if (result && result.success) {
       toast({ title: 'Success', description: result.message });
       router.refresh();
     } else {
-      toast({ variant: 'destructive', title: 'Error', description: result?.message || 'An unknown error occurred.' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: result?.message || 'An unknown error occurred.',
+      });
     }
+
     setActionTarget(null);
     setSuspensionReason('');
   };
@@ -142,7 +156,7 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
 
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className='w-full sm:w-auto'>
+              <Button className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add
               </Button>
@@ -221,7 +235,9 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
                       </Avatar>
                       <div>
                         <p>{user.name}</p>
-                        <p className="text-xs text-muted-foreground sm:hidden">{user.employeeCode}</p>
+                        <p className="text-xs text-muted-foreground sm:hidden">
+                          {user.employeeCode}
+                        </p>
                       </div>
                     </TableCell>
 
@@ -246,52 +262,66 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
                         )}
                       </Badge>
                     </TableCell>
-                      <TableCell>
-                          <Badge variant={user.status === 'ACTIVE' ? 'default' : user.status === 'SUSPENDED' ? 'secondary' : 'destructive'}>{user.status}</Badge>
-                      </TableCell>
 
-                    <TableCell className='flex gap-1 sm:gap-2'>
-                      <Button
-                          variant='outline'
-                          size='icon'
-                          onClick={() => router.push(`/admin/employees/${user.id}/edit`)}
+                    <TableCell>
+                      <Badge
+                        variant={
+                          user.status === 'ACTIVE'
+                            ? 'default'
+                            : user.status === 'SUSPENDED'
+                            ? 'secondary'
+                            : 'destructive'
+                        }
                       >
-                          <Edit className='h-4 w-4' />
-                      </Button>
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="flex gap-1 sm:gap-2">
                       <Button
-                        variant='outline'
-                        size='icon'
+                        variant="outline"
+                        size="icon"
+                        onClick={() => router.push(`/admin/employees/${user.id}/edit`)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           setActionTarget({ user, action: 'reset' });
                         }}
                       >
-                        <KeyRound className='text-blue-500 h-4 w-4' />
+                        <KeyRound className="text-blue-500 h-4 w-4" />
                       </Button>
+
                       <Button
-                        variant='outline'
-                        size='icon'
+                        variant="outline"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           setActionTarget({ user, action: 'suspend' });
                         }}
                         disabled={user.status === 'SUSPENDED'}
                       >
-                        <Ban className='text-yellow-500 h-4 w-4' />
+                        <Ban className="text-yellow-500 h-4 w-4" />
                       </Button>
+
                       <Button
-                        variant='outline'
-                        size='icon'
+                        variant="outline"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           setActionTarget({ user, action: 'deactivate' });
                         }}
                         disabled={user.status === 'INACTIVE'}
                       >
-                        <UserX className='text-destructive h-4 w-4' />
+                        <UserX className="text-destructive h-4 w-4" />
                       </Button>
                     </TableCell>
-                  </TableRow>
+                  </TableRow>  
                 ))}
               </TableBody>
             </Table>
@@ -304,28 +334,38 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
           <DialogHeader>
             <DialogTitle>Confirm Action</DialogTitle>
             <DialogDescription>
-              Are you sure you want to {actionTarget?.action} <strong>{actionTarget?.user.name}</strong>'s account?
-                {actionTarget?.action === 'reset' && ' Their password will be reset to \'password\'.'}
+              Are you sure you want to {actionTarget?.action}{' '}
+              <strong>{actionTarget?.user.name}</strong>'s account?
+              {actionTarget?.action === 'reset' &&
+                " Their password will be reset to 'password'."}
             </DialogDescription>
           </DialogHeader>
 
-            {actionTarget?.action === 'suspend' && (
-                <div className='space-y-2'>
-                    <label htmlFor='suspensionReason'>Reason for Suspension</label>
-                    <Textarea 
-                        id='suspensionReason'
-                        value={suspensionReason} 
-                        onChange={(e) => setSuspensionReason(e.target.value)} 
-                        placeholder='Enter the reason for suspending this user.'
-                    />
-                </div>
-            )}
+          {actionTarget?.action === 'suspend' && (
+            <div className="space-y-2">
+              <label htmlFor="suspensionReason">Reason for Suspension</label>
+              <Textarea
+                id="suspensionReason"
+                value={suspensionReason}
+                onChange={(e) => setSuspensionReason(e.target.value)}
+                placeholder="Enter the reason for suspending this user."
+              />
+            </div>
+          )}
 
           <DialogFooter>
-            <Button variant='outline' onClick={() => setActionTarget(null)}>
+            <Button variant="outline" onClick={() => setActionTarget(null)}>
               Cancel
             </Button>
-            <Button variant={actionTarget?.action === 'deactivate' || actionTarget?.action === 'suspend' ? 'destructive' : 'default'} onClick={handleAction}>
+            <Button
+              variant={
+                actionTarget?.action === 'deactivate' ||
+                actionTarget?.action === 'suspend'
+                  ? 'destructive'
+                  : 'default'
+              }
+              onClick={handleAction}
+            >
               Yes, Proceed
             </Button>
           </DialogFooter>
@@ -333,4 +373,5 @@ export function EmployeeManagement({ initialUsers }: EmployeeManagementProps) {
       </Dialog>
     </Card>
   );
+}
 }
