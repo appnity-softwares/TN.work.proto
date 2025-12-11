@@ -13,6 +13,7 @@ import {
   Row,
   Cell,
 } from '@tanstack/react-table';
+
 import {
   Table,
   TableBody,
@@ -21,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+
 import { Button } from '@/components/ui/button';
 import { approveUserDetails } from '@/app/api/admin-actions';
 import { toast } from 'sonner';
@@ -32,6 +34,14 @@ export const columns: ColumnDef<UserWithMeta>[] = [
     accessorKey: 'name',
     header: 'Name',
   },
+
+  // ✅ NEW EMAIL COLUMN
+  {
+    accessorKey: 'email',
+    header: 'Email',
+    cell: ({ row }: { row: Row<UserWithMeta> }) => row.original.email || "—",
+  },
+
   {
     accessorKey: 'meta.mobileNumber',
     header: 'Mobile Number',
@@ -47,6 +57,7 @@ export const columns: ColumnDef<UserWithMeta>[] = [
     header: 'Emergency Contact',
     cell: ({ row }: { row: Row<UserWithMeta> }) => row.original.meta?.emergencyContact,
   },
+
   {
     id: 'actions',
     cell: ({ row }: { row: Row<UserWithMeta> }) => {
@@ -89,9 +100,7 @@ export function EmployeeDetailsTable({ users }: EmployeeDetailsTableProps) {
     getCoreRowModel: getCoreRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
-    state: {
-      sorting,
-    },
+    state: { sorting },
   });
 
   return (
@@ -100,21 +109,17 @@ export function EmployeeDetailsTable({ users }: EmployeeDetailsTableProps) {
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup: HeaderGroup<UserWithMeta>) => (
             <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header: Header<UserWithMeta, unknown>) => {
-                return (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                );
-              })}
+              {headerGroup.headers.map((header: Header<UserWithMeta, unknown>) => (
+                <TableHead key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              ))}
             </TableRow>
           ))}
         </TableHeader>
+
         <TableBody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row: Row<UserWithMeta>) => (

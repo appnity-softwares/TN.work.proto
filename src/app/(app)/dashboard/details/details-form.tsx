@@ -20,19 +20,24 @@ import { updateUserDetails } from '@/app/api/actions';
 import { SessionUser } from '@/lib/types';
 
 const formSchema = z.object({
+  email: z.string().email("Enter a valid email"),
   mobileNumber: z.string().min(10, 'Mobile number must be at least 10 digits'),
   address: z.string().min(1, 'Address is required'),
   emergencyContact: z.string().min(1, 'Emergency contact is required'),
+  profileUrl: z.string().url("Enter a valid profile image URL"),
 });
 
 export function DetailsForm({ user }: { user: SessionUser }) {
   const router = useRouter();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      email: user.email || "",
       mobileNumber: '',
       address: '',
       emergencyContact: '',
+      profileUrl: user.avatar || "",
     },
   });
 
@@ -50,6 +55,38 @@ export function DetailsForm({ user }: { user: SessionUser }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-lg">
+
+        {/* EMAIL FIELD */}
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email Address</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter your email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* PROFILE URL FIELD */}
+        <FormField
+          control={form.control}
+          name="profileUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Profile Image URL</FormLabel>
+              <FormControl>
+                <Input placeholder="https://your-photo-url.jpg" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* MOBILE */}
         <FormField
           control={form.control}
           name="mobileNumber"
@@ -63,6 +100,8 @@ export function DetailsForm({ user }: { user: SessionUser }) {
             </FormItem>
           )}
         />
+
+        {/* ADDRESS */}
         <FormField
           control={form.control}
           name="address"
@@ -76,6 +115,8 @@ export function DetailsForm({ user }: { user: SessionUser }) {
             </FormItem>
           )}
         />
+
+        {/* EMERGENCY */}
         <FormField
           control={form.control}
           name="emergencyContact"
@@ -89,6 +130,7 @@ export function DetailsForm({ user }: { user: SessionUser }) {
             </FormItem>
           )}
         />
+
         <Button type="submit" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? 'Submitting...' : 'Submit Details'}
         </Button>

@@ -1,4 +1,3 @@
-// /src/components/admin/MeetingScheduler.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -20,19 +19,21 @@ export function MeetingScheduler({ onCreated }: { onCreated?: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Allow selecting future dates only (calendar will allow any date; we'll validate before submit)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!clientName.trim() || !title.trim() || !selectedDate) {
       toast({ variant: "destructive", title: "Missing fields", description: "Client, title and date are required." });
       return;
     }
 
-    // Prevent past dates
+    // validate future or today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     const sel = new Date(selectedDate);
     sel.setHours(0, 0, 0, 0);
+
     if (sel < today) {
       toast({ variant: "destructive", title: "Invalid date", description: "Please pick today or a future date." });
       return;
@@ -45,8 +46,7 @@ export function MeetingScheduler({ onCreated }: { onCreated?: () => void }) {
         clientName: clientName.trim(),
         title: title.trim(),
         description: description.trim(),
-       date: format(selectedDate, "yyyy-MM-dd"),
-
+        date: format(selectedDate, "yyyy-MM-dd"),
         time: time || null,
         notify: true,
       };
@@ -57,21 +57,19 @@ export function MeetingScheduler({ onCreated }: { onCreated?: () => void }) {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || "Failed to create meeting");
-      }
+      if (!res.ok) throw new Error("Failed to create reminder");
 
       setClientName("");
       setTitle("");
       setDescription("");
       setSelectedDate(undefined);
       setTime("");
-      toast({ title: "Meeting scheduled", description: "Reminder saved and email sent (if configured)." });
-      if (onCreated) onCreated();
+
+      toast({ title: "Meeting scheduled", description: "Reminder saved." });
+
+      onCreated?.();
     } catch (err: any) {
-      console.error("Create meeting error:", err);
-      toast({ variant: "destructive", title: "Error", description: err.message || "Failed to schedule meeting." });
+      toast({ variant: "destructive", title: "Error", description: err.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -87,6 +85,7 @@ export function MeetingScheduler({ onCreated }: { onCreated?: () => void }) {
           <Input placeholder="Client name" value={clientName} onChange={(e) => setClientName(e.target.value)} required />
           <Input placeholder="Meeting title" value={title} onChange={(e) => setTitle(e.target.value)} required />
           <Textarea placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
+
           <div className="flex gap-2 items-center">
             <Popover>
               <PopoverTrigger asChild>
@@ -94,17 +93,17 @@ export function MeetingScheduler({ onCreated }: { onCreated?: () => void }) {
                   {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-               <Calendar
-  mode="single"
-  selected={selectedDate}
-  onSelect={setSelectedDate}
-  month={selectedDate || new Date()}      // ⭐ allow navigation
-  fromDate={new Date()}                  // ⭐ allow today + future
-  toDate={new Date(2100, 0, 1)}          // ⭐ allow far future
-  disabled={{ before: new Date() }}      // ⭐ disable past only
-/>
 
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  month={selectedDate || new Date()}
+                  fromDate={new Date()}        // allow today + future
+                  toDate={new Date(2100, 0, 1)}
+                  disabled={{ before: new Date() }}  // disable all past dates
+                />
               </PopoverContent>
             </Popover>
 

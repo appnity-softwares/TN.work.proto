@@ -1,4 +1,3 @@
-// /src/components/admin/EditReminderModal.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -16,19 +15,14 @@ export function EditReminderModal({
   onOpenChange,
   reminderId,
   onUpdated,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  reminderId: string;
-  onUpdated?: () => void;
 }) {
   const [loading, setLoading] = useState(false);
-  const [rem, setRem] = useState<any>(null);
+  const [rem, setRem] = useState(null);
   const [clientName, setClientName] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState<Date | undefined>(undefined);
-  const [time, setTime] = useState<string>("");
+  const [time, setTime] = useState("");
   const [notify, setNotify] = useState(true);
   const { toast } = useToast();
 
@@ -42,6 +36,7 @@ export function EditReminderModal({
         if (!res.ok) throw new Error("Failed to fetch");
         const json = await res.json();
         const r = json.reminder;
+
         setRem(r);
         setClientName(r.clientName || "");
         setTitle(r.title || "");
@@ -49,7 +44,6 @@ export function EditReminderModal({
         setDate(r.date ? new Date(r.date) : undefined);
         setTime(r.time || "");
       } catch (err) {
-        console.error(err);
         toast({ variant: "destructive", title: "Failed to load reminder" });
       } finally {
         setLoading(false);
@@ -57,38 +51,35 @@ export function EditReminderModal({
     })();
   }, [open, reminderId, toast]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!rem) return;
 
-    setLoading(true);
-    try {
-      const payload = {
-        clientName,
-        title,
-        description,
-        date: date ? date.toISOString() : undefined,
-        time,
-        notify,
-      };
+    const payload = {
+      clientName,
+      title,
+      description,
+      date: date ? date.toISOString() : undefined,
+      time,
+      notify,
+    };
 
+    setLoading(true);
+
+    try {
       const res = await fetch(`/api/reminders/${reminderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed" }));
-        throw new Error(err.error || "Failed to update");
-      }
+      if (!res.ok) throw new Error("Failed to update");
 
       toast({ title: "Reminder updated" });
       onOpenChange(false);
-      if (onUpdated) onUpdated();
-    } catch (err: any) {
-      console.error("Update error:", err);
-      toast({ variant: "destructive", title: "Update failed", description: err.message || "Error" });
+      onUpdated?.();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Update failed" });
     } finally {
       setLoading(false);
     }
@@ -105,26 +96,41 @@ export function EditReminderModal({
           <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Client name" required />
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+
           <div className="flex gap-2 items-center">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full text-left">{date ? format(date, "PPP") : "Pick a date"}</Button>
+                <Button variant="outline" className="w-full text-left">
+                  {date ? format(date, "PPP") : "Pick a date"}
+                </Button>
               </PopoverTrigger>
+
               <PopoverContent className="w-auto p-0">
-                <Calendar selected={date} onSelect={setDate} />
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  month={date || new Date()}
+                  fromDate={new Date()}
+                  toDate={new Date(2100, 0, 1)}
+                  disabled={{ before: new Date() }}
+                />
               </PopoverContent>
             </Popover>
+
             <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="max-w-[140px]" />
           </div>
 
           <div className="flex items-center gap-3">
             <input id="notify" type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-            <label htmlFor="notify">Notify (send updated meeting email)</label>
+            <label htmlFor="notify">Notify via email</label>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={loading}>{loading ? "Saving…" : "Save changes"}</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving…" : "Save changes"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

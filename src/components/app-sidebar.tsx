@@ -13,7 +13,13 @@ import {
   LucideProps,
   Info,
   Trash,
+  ClipboardList,
+  CalendarClock,
+  Mail,
 } from 'lucide-react';
+
+
+
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Logo } from './logo';
@@ -42,16 +48,52 @@ const employeeNavItems: NavItem[] = [
   { href: '/dashboard/details', icon: Info, label: 'My Details' },
 ];
 
-const adminNavItems: NavItem[] = [
-  { href: '/admin/attendance', icon: Clock, label: 'Attendance' },
-  { href: '/admin/employees', icon: Users, label: 'Employees' },
-  { href: '/admin/clients', icon: Briefcase, label: 'Clients', showCount: true },
-  { href: '/admin/notices', icon: Bell, label: 'Notices' },
-  { href: '/admin/bin', icon: Trash, label: 'Bin' },
-  { href: '/admin/employee-details', icon: Users, label: 'Employee Details' },
-  { href: '/admin/reminders', icon: Clock, label: 'Meetings' },
 
+
+const adminNavItems: NavItem[] = [
+  {
+    href: '/admin/attendance',
+    icon: ClipboardList,     // Attendance → checklist
+    label: 'Attendance',
+  },
+  {
+    href: '/admin/employees',
+    icon: Users,             // Employees → users icon
+    label: 'Employees',
+  },
+  {
+    href: '/admin/clients',
+    icon: Briefcase,         // Clients → business briefcase
+    label: 'Clients',
+    showCount: true,
+  },
+  {
+    href: '/admin/notices',
+    icon: Bell,              // Notices → bell (notification)
+    label: 'Notices',
+  },
+  {
+    href: '/admin/bin',
+    icon: Trash,             // Bin → trash icon
+    label: 'Bin',
+  },
+  {
+    href: '/admin/employee-details',
+    icon: Info,     // Employee Details → form/checklist icon
+    label: 'Employee Details',
+  },
+  {
+    href: '/admin/reminders',
+    icon: CalendarClock,     // Meetings / Reminders → calendar + clock
+    label: 'Meetings',
+  },
+  {
+    href: '/admin/email',
+    icon: Mail,              // Email → proper mail icon
+    label: 'Email',
+  },
 ];
+
 
 export function AppSidebarNav({ user }: { user: SessionUser }) {
   const pathname = usePathname();
@@ -85,7 +127,8 @@ export function AppSidebarNav({ user }: { user: SessionUser }) {
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
           <Logo />
-          <span className="">Acme Corp</span>
+         <span className="">{user.name}</span>
+ {/* Current User Name Placeholder */}
         </Link>
       </div>
       <div className="flex-1">

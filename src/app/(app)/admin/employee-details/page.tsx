@@ -1,3 +1,5 @@
+// /Users/kunal/Documents/WORK/studio-TN.proto-main/src/app/(app)/admin/employee-details/page.tsx
+
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { db as prisma } from "@/lib/db";

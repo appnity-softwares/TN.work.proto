@@ -1,3 +1,4 @@
+// src/app/api/admin-actions.ts
 'use server';
 
 import { db as prisma } from '@/lib/db';
