@@ -1,3 +1,9 @@
+// -------------------------------
+//  GENERATORS & DB
+// -------------------------------
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider     = "postgresql"
@@ -5,42 +11,9 @@ datasource db {
   relationMode = "prisma"
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-model User {
-  id            String    @id @default(cuid()) 
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  role          Role      @default(EMPLOYEE)
-
-  // Passcode instead of Password
-  passcode String?
-
-  // Employee-specific fields
-  employeeCode String?   @unique
-  status       UserStatus? @default(ACTIVE)
-  isClockedIn  Boolean   @default(false)
-  lastClockIn  DateTime?
-  hours        Json?
-  meta         Json?
-
-  accounts Account[]
-
-  // TaskNity specific relations
-  sessions      Session[]
-  logs          Log[]
-  notices       Notice[]
-  recipients    Recipient[]
-  reminders     Reminder[]
-  meetings      Meeting[]
-  passwordResetPasswordResetToken[]
-  editTokens    EditToken[] // Relation to EditToken
-  Bin           Bin[]
-}
+// -------------------------------
+//  ENUMS (Merged)
+// -------------------------------
 
 enum Role {
   SUPERADMIN
@@ -54,8 +27,87 @@ enum UserStatus {
   SUSPENDED
 }
 
+enum NoticeType {
+  PUBLIC
+  PRIVATE
+  WARNING
+}
+
+enum ClientStatus {
+  ACTIVE
+  ON_HOLD
+  CLOSED
+}
+
+enum ClientLogStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CANCELLED
+}
+
+enum BinType {
+  NOTE
+  TODO
+  IDEA
+}
+
+// -------------------------------
+//  USER MODEL (Merged)
+// -------------------------------
+model User {
+  // keep as uuid to avoid drop on old data
+  id             String     @id @default(uuid())
+  name           String?
+  email          String?    @unique
+  employeeCode   String?    @unique
+
+  // old hashedPasscode + new passcode (NO DROP)
+  hashedPasscode String?
+  passcode       String?
+
+  role           Role       @default(EMPLOYEE)
+  status         UserStatus @default(ACTIVE)
+
+  joinDate       DateTime   @default(now())
+  meta           Json?
+  avatar         String?
+  image          String?
+  emailVerified  DateTime?
+  isClockedIn    Boolean     @default(false)
+  lastClockIn    DateTime?
+  hours          Json?
+
+  // relations from new schema
+  accounts       Account[]
+  sessions       Session[]
+  logs           Log[]
+  notices        Notice[]        @relation("UserNotices")
+  recipients     Recipient[]
+  reminders      Reminder[]
+  meetings       Meeting[]
+  editTokens     EditToken[]
+  Bin            Bin[]
+
+  // relations from old schema
+  attendance        Attendance[]
+  workLogs          WorkLog[]
+  noticesIssued     Notice[]          @relation("AdminIssuedNotices")
+  errorLogs         ErrorLog[]
+  projects          Project[]         @relation("UserProjects")
+  discussionPosts   DiscussionPost[]
+  discussionReplies DiscussionReply[]
+  clientAssignments ClientEmployee[]
+  createdClientLogs ClientLog[]       @relation("UserClientLogs")
+
+  passwordResetTokens PasswordResetToken[]
+}
+
+// -------------------------------
+//  AUTH MODELS
+// -------------------------------
 model Account {
-  id                String  @id @default(cuid()) 
+  id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
@@ -83,33 +135,33 @@ model Session {
 
 model VerificationToken {
   identifier String
-  token      String   @unique
+  token      String @unique
   expires    DateTime
 
   @@unique([identifier, token])
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   token     String   @unique
   expiresAt DateTime
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  used      Boolean  @default(false)
   userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Add the new EditToken model
 model EditToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  expires   DateTime
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id      String   @id @default(cuid())
+  token   String   @unique
+  expires DateTime
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-
-// App specific models
-
-// User work logs
+// -------------------------------
+//  NEW LOG MODEL
+// -------------------------------
 model Log {
   id        String   @id @default(cuid())
   content   String
@@ -120,17 +172,28 @@ model Log {
   meta      Json?
 }
 
-// Admin notices
+// -------------------------------
+//  NOTICE (Merged)
+// -------------------------------
 model Notice {
-  id        String      @id @default(cuid())
+  id       String   @id @default(uuid())
+
+  // old relations
+  issuedBy User     @relation("AdminIssuedNotices", fields: [adminId], references: [id], onDelete: Cascade)
+  adminId  String
+
+  targetUserId String?
+  targetUser   User?  @relation("UserNotices", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  type      NoticeType @default(PUBLIC)
   title     String
-  content   String
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  authorId  String
-  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  message   String?
+  content   String?
+  createdAt DateTime   @default(now())
+  
+  updatedAt DateTime?   @updatedAt 
   isPublic  Boolean     @default(true)
-  meta      Json?
+
   recipients Recipient[]
 }
 
@@ -139,61 +202,238 @@ model Recipient {
   noticeId String
   userId   String
   isRead   Boolean @default(false)
-  notice   Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([noticeId, userId])
 }
 
-// Error logging
+// -------------------------------
+//  ATTENDANCE (old)
+// -------------------------------
+model Attendance {
+  id       String    @id @default(uuid())
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  checkIn  DateTime
+  checkOut DateTime?
+}
+
+// -------------------------------
+//  WORK LOG (old)
+// -------------------------------
+model WorkLog {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  date        DateTime @default(now())
+  description String
+  metadata    Json?
+}
+
+// -------------------------------
+//  ERROR LOG (merged)
+// -------------------------------
 model ErrorLog {
-  id        String   @id @default(cuid())
-  message   String
-  stack     String?
-  component String?
+  id         String   @id @default(uuid())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId     String?
+  route      String?
+  message    String
+  stacktrace String?
+  component  String?
+  metadata   Json?
+  timestamp  DateTime @default(now())
+  createdAt  DateTime @default(now())
+}
+
+// -------------------------------
+//  DISCUSSION MODELS
+// -------------------------------
+model DiscussionPost {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  replies DiscussionReply[]
+}
+
+model DiscussionReply {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  post   DiscussionPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+}
+
+// -------------------------------
+//  CLIENT MODELS (old)
+// -------------------------------
+model Client {
+  id           String        @id @default(uuid())
+  name         String
+  companyName  String?
+  email        String? @unique
+  contactEmail String?
+  contactPhone String?
+  funds        Float?
+  objective    String?
+  notes        String?
+  status       ClientStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  employees ClientEmployee[]
+  projects  ClientProject[]
+  logs      ClientLog[]
+  audits    ClientAudit[]
+  reminders Reminder[]
+}
+
+// -------------------------------
+model ClientLog {
+  id          String          @id @default(uuid())
+  client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId    String
+
+  createdBy   User?           @relation("UserClientLogs", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  objective   String?
+  demand      String?
+  request     String?
+  response    String?
+  amount      Float?
+  attachments Json?
+  status      ClientLogStatus @default(OPEN)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  files ClientLogFile[]
+}
+
+// -------------------------------
+model ClientLogFile {
+  id           String   @id @default(uuid())
+  log          ClientLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  logId        String
+  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId    String?
+  fileUrl      String
+  cloudinaryId String?
+  fileName     String
+  fileType     String
+  createdAt    DateTime @default(now())
+}
+
+// -------------------------------
+model ClientAudit {
+  id        String   @id @default(uuid())
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId  String
+  action    String
+  changedBy String?
+  data      Json?
   createdAt DateTime @default(now())
 }
 
+// -------------------------------
+model ClientEmployee {
+  id        String   @id @default(uuid())
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, userId])
+}
+
+// -------------------------------
+model ClientProject {
+  id        String   @id @default(uuid())
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId  String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, projectId])
+}
+
+// -------------------------------
+//  PROJECT MODEL
+// -------------------------------
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  users          User[]          @relation("UserProjects")
+  clientLinks    ClientProject[]
+  clientLogFiles ClientLogFile[]
+}
+
+// -------------------------------
+//  REMINDER (Merged)
+// -------------------------------
 model Reminder {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+
+  clientName  String?
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+
   title       String
   description String?
   date        DateTime
   isRecurring Boolean  @default(false)
+  time        String?
+
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId    String?
-  client      Client?  @relation(fields: [clientId], references: [id])
+  updatedAt   DateTime? @updatedAt
 }
 
+// -------------------------------
+//  MEETING (new)
+// -------------------------------
 model Meeting {
-  id        String   @id @default(cuid()) 
+  id        String   @id @default(cuid())
   title     String
   date      DateTime
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// -------------------------------
+//  BIN (merged)
+// -------------------------------
 model Bin {
-  id        String   @id @default(cuid()) 
-  type      String
+  id        String   @id @default(uuid())
   content   String
-  date      DateTime
+  type      String?    // new schema uses string
+  date      DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  meta      Json?
-}
 
-model Client {
-  id        String   @id @default(cuid())
-  name      String
-  email     String?  @unique
-  reminders Reminder[]
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  meta   Json?
 }
