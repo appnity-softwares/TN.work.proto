@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -17,22 +17,12 @@ import SendEmailForm from '@/components/admin/SendEmailForm';
 import { toast } from 'sonner';
 import { format } from "date-fns";
 import {
-  Clock,
   Download,
   FileText,
   Mail,
   PieChart,
   Calendar as CalendarIcon,
-  NotebookText, // or FileText if you prefer
-  Wallet,
 } from "lucide-react";
-
-
-/**
- * Client-side UI for Employee Details page
- *
- * Props shape matches what server page passes.
- */
 
 type AttendanceItem = { id: string; checkIn?: string | null; checkOut?: string | null };
 type WorkLogItem = { id: string; date?: string | null; description?: string };
@@ -78,15 +68,10 @@ export default function EmployeeDetailsClient(props: EmployeeProps) {
   const totalLeaves = leave?.allowance ?? 0;
   const takenLeaves = leave?.taken ?? 0;
   const remainingLeaves = Math.max(totalLeaves - takenLeaves, 0);
-const safeStats = stats ?? {
-  totalAttendanceRecords: 0,
-  totalWorkLogs: 0,
-  lastClockIn: null,
-};
 
-  const lastClockInDisplay = safeStats.lastClockIn
-  ? format(new Date(safeStats.lastClockIn), "PP p")
-  : "—";
+  const lastClockInDisplay = stats?.lastClockIn
+    ? format(new Date(stats.lastClockIn), "PP p")
+    : "—";
 
   const recentNotices = lists.noticesIssued ?? [];
 
@@ -96,9 +81,7 @@ const safeStats = stats ?? {
     return { total, present };
   }, [stats.totalAttendanceRecords, lists.attendance]);
 
-  // small inline SVG mini charts (no external deps)
   const AttendanceMiniChart = ({ data }: { data: AttendanceItem[] }) => {
-    // simple bar heights per recent 7 entries
     const last = data.slice(0, 7);
     const values = last.map((d) => {
       const inT = d.checkIn ? new Date(d.checkIn).getTime() : 0;
@@ -121,7 +104,6 @@ const safeStats = stats ?? {
     );
   };
 
-  // File upload helpers for Documents dialog
   const handleFileChange = (file: File | null) => {
     setSelectedFile(file);
     if (previewUrl) {
@@ -162,7 +144,6 @@ const safeStats = stats ?? {
     }
   };
 
-  // Optional enhancements list
   const enhancements = [
     "Performance / 1:1 notes",
     "Skill matrix & certifications",
@@ -406,8 +387,7 @@ const safeStats = stats ?? {
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => window.open(documents.idProof, "_blank")}>
-                        <FileText
- className="mr-2 h-4 w-4" /> View
+                        <FileText className="mr-2 h-4 w-4" /> View
                       </Button>
                     </div>
                   </div>

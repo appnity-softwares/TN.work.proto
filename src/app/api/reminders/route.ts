@@ -4,11 +4,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuth } from "@/lib/auth/get-auth";
 import { sendMeetingScheduledEmail } from "@/lib/email/hooks";
-import { zonedTimeToUtc, utcToZonedTime } from "date-fns-tz";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { startOfDay, endOfDay } from "date-fns";
 import { formatISTDate, formatISTTime, formatISTDateTime } from "@/lib/time";
 
 const INDIA_TIME_ZONE = "Asia/Kolkata";
+
 
 export async function POST(req: Request) {
   try {
@@ -35,7 +36,8 @@ export async function POST(req: Request) {
     const dateTimeString = `${date}T${timeString}:00`;
 
     // Create a timezone-aware date
-    const scheduledDate = zonedTimeToUtc(dateTimeString, INDIA_TIME_ZONE);
+    const scheduledDate = fromZonedTime(dateTimeString, INDIA_TIME_ZONE);
+
 
     if (isNaN(scheduledDate.getTime())) {
       return NextResponse.json({ error: "Invalid date/time format" }, { status: 400 });
@@ -114,7 +116,9 @@ export async function GET(req: Request) {
     const where: any = { userId: user.id };
 
     if (dateParam) {
-      const zonedDate = zonedTimeToUtc(dateParam, INDIA_TIME_ZONE);
+      
+      const zonedDate = fromZonedTime(dateParam, INDIA_TIME_ZONE);
+
       const start = startOfDay(zonedDate);
       const end = endOfDay(zonedDate);
 

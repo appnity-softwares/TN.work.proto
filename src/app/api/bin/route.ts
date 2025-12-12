@@ -1,30 +1,28 @@
-import { NextResponse } from 'next/server';
-import { getAuth } from '@/lib/auth/get-auth';
-import { db } from '@/lib/db';
-import { BinType } from '@prisma/client';
+import { NextResponse } from "next/server";
+import { getAuth } from "@/lib/auth/get-auth";
+import { db } from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
     const session = await getAuth();
     const user = session?.user;
 
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user || user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { content, type, date } = await req.json();
     if (!content || !type) {
-      return NextResponse.json({ error: 'Missing content or type' }, { status: 400 });
-    }
-
-    if (!Object.values(BinType).includes(type as BinType)) {
-      return NextResponse.json({ error: 'Invalid bin type' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing content or type" },
+        { status: 400 }
+      );
     }
 
     const binItem = await db.bin.create({
       data: {
         content,
-        type: type as BinType,
+        type, // now plain string
         date: date ? new Date(date) : null,
         userId: user.id,
       },
@@ -32,8 +30,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ binItem }, { status: 201 });
   } catch (error) {
-    console.error('Error creating bin item:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Error creating bin item:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -42,33 +43,38 @@ export async function GET(req: Request) {
     const session = await getAuth();
     const user = session?.user;
 
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user || user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
-    const date = searchParams.get('date');
+    const date = searchParams.get("date");
 
     const whereClause: any = { userId: user.id };
+
     if (date) {
-      const startDate = new Date(date);
-      const endDate = new Date(date);
-      endDate.setDate(endDate.getDate() + 1);
+      const start = new Date(date);
+      const end = new Date(date);
+      end.setDate(end.getDate() + 1);
+
       whereClause.date = {
-        gte: startDate,
-        lt: endDate,
+        gte: start,
+        lt: end,
       };
     }
 
     const binItems = await db.bin.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json({ binItems }, { status: 200 });
   } catch (error) {
-    console.error('Error fetching bin items:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Error fetching bin items:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -77,24 +83,28 @@ export async function DELETE(req: Request) {
     const session = await getAuth();
     const user = session?.user;
 
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user || user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ error: 'Missing item ID' }, { status: 400 });
+      return NextResponse.json({ error: "Missing item ID" }, { status: 400 });
     }
 
-    await db.bin.delete({
-      where: { id },
-    });
+    await db.bin.delete({ where: { id } });
 
-    return NextResponse.json({ message: 'Bin item deleted' }, { status: 200 });
+    return NextResponse.json(
+      { message: "Bin item deleted" },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error('Error deleting bin item:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Error deleting bin item:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

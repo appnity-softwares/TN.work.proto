@@ -16,6 +16,8 @@ import {
   ClipboardList,
   CalendarClock,
   Mail,
+  List,
+  Mailbox,
 } from 'lucide-react';
 
 
@@ -92,6 +94,7 @@ const adminNavItems: NavItem[] = [
     icon: Mail,              // Email → proper mail icon
     label: 'Email',
   },
+  { href: '/admin/email-logs', icon: Mailbox, label: 'Email Logs' }, // NEW
 ];
 
 
@@ -157,11 +160,11 @@ export function AppSidebarNav({ user }: { user: SessionUser }) {
           <Avatar>
             <AvatarImage
               src={userAvatar?.imageUrl}
-              alt={user.name}
+              alt={user.name || 'User avatar'}
               data-ai-hint={userAvatar?.imageHint}
             />
             <AvatarFallback>
-              {user.name.charAt(0).toUpperCase()}
+              {user.name?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
 

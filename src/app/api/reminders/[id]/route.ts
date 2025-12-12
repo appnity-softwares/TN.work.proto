@@ -75,33 +75,42 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       data: updates
     });
 
-    // Optional email notification
-    if (body.notify && user.email) {
-      const formattedDate = updated.date.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric"
+    // -----------------------------
+    // FIX: Ensure nullable strings are valid strings
+    // -----------------------------
+    const safeClientName = updated.clientName ?? "";
+    const safeTitle = updated.title ?? "";
+    const safeDescription = updated.description ?? "";
+    const safeUserName = user.name ?? "User";
+
+    const formattedDate = updated.date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+
+    const formattedTime =
+      updated.time ||
+      updated.date.toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
       });
 
-      const formattedTime =
-        updated.time ||
-        updated.date.toLocaleTimeString(undefined, {
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-
+    if (body.notify && user.email) {
       await sendMeetingScheduledEmail({
         user: {
           id: user.id,
-          name: user.name || "User",
-          email: user.email
+          name: safeUserName,
+          email: user.email,
         },
-        clientName: updated.clientName,
-        title: updated.title,
+        clientName: safeClientName,
+        title: safeTitle,
         date: formattedDate,
         time: formattedTime,
-        description: updated.description || ""
-      }).catch(err => console.error("Meeting email send failed:", err));
+        description: safeDescription,
+      }).catch((err) =>
+        console.error("Meeting email send failed:", err)
+      );
     }
 
     return NextResponse.json({ reminder: updated }, { status: 200 });
@@ -110,6 +119,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {

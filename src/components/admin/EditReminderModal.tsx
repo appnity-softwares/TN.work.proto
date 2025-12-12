@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -10,22 +16,46 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
+// -----------------------------
+//  PROPS — FIXED TYPES
+// -----------------------------
+interface EditReminderModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  reminderId: string | null;
+  onUpdated?: () => void;
+}
+
+interface ReminderData {
+  id: string;
+  clientName: string | null;
+  title: string;
+  description: string | null;
+  date: string;
+  time: string | null;
+}
+
 export function EditReminderModal({
   open,
   onOpenChange,
   reminderId,
   onUpdated,
-}) {
+}: EditReminderModalProps) {
   const [loading, setLoading] = useState(false);
-  const [rem, setRem] = useState(null);
+  const [rem, setRem] = useState<ReminderData | null>(null);
+
   const [clientName, setClientName] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [time, setTime] = useState("");
   const [notify, setNotify] = useState(true);
+
   const { toast } = useToast();
 
+  // -----------------------------
+  // FETCH REMINDER
+  // -----------------------------
   useEffect(() => {
     if (!open || !reminderId) return;
 
@@ -33,9 +63,10 @@ export function EditReminderModal({
       setLoading(true);
       try {
         const res = await fetch(`/api/reminders/${reminderId}`);
-        if (!res.ok) throw new Error("Failed to fetch");
+        if (!res.ok) throw new Error("Failed to fetch reminder");
+
         const json = await res.json();
-        const r = json.reminder;
+        const r: ReminderData = json.reminder;
 
         setRem(r);
         setClientName(r.clientName || "");
@@ -51,9 +82,12 @@ export function EditReminderModal({
     })();
   }, [open, reminderId, toast]);
 
-  const handleSave = async (e) => {
+  // -----------------------------
+  // SAVE CHANGES
+  // -----------------------------
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!rem) return;
+    if (!reminderId) return;
 
     const payload = {
       clientName,
@@ -93,9 +127,31 @@ export function EditReminderModal({
         </DialogHeader>
 
         <form onSubmit={handleSave} className="space-y-3">
-          <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Client name" required />
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+          <Input
+            value={clientName}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setClientName(e.target.value)
+            }
+            placeholder="Client name"
+            required
+          />
+
+          <Input
+            value={title}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setTitle(e.target.value)
+            }
+            placeholder="Title"
+            required
+          />
+
+          <Textarea
+            value={description}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+              setDescription(e.target.value)
+            }
+            placeholder="Description"
+          />
 
           <div className="flex gap-2 items-center">
             <Popover>
@@ -118,16 +174,33 @@ export function EditReminderModal({
               </PopoverContent>
             </Popover>
 
-            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="max-w-[140px]" />
+            <Input
+              type="time"
+              value={time}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setTime(e.target.value)
+              }
+              className="max-w-[140px]"
+            />
           </div>
 
           <div className="flex items-center gap-3">
-            <input id="notify" type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+            <input
+              id="notify"
+              type="checkbox"
+              checked={notify}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setNotify(e.target.checked)
+              }
+            />
             <label htmlFor="notify">Notify via email</label>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+
             <Button type="submit" disabled={loading}>
               {loading ? "Saving…" : "Save changes"}
             </Button>

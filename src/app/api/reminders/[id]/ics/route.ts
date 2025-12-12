@@ -21,7 +21,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Ensure admin can only access their own reminders
     if (reminder.userId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -41,18 +40,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     const end = new Date(startUTC.getTime() + 60 * 60 * 1000);
 
-    const dtstamp = new Date()
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .split(".")[0] + "Z";
-    const dtstart = startUTC
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .split(".")[0] + "Z";
-    const dtend = end
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .split(".")[0] + "Z";
+    const dtstamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    const dtstart = startUTC.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    const dtend = end.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+
+    // ✅ FIX: normalize nullable fields to empty string
+    const safeTitle = reminder.title ?? "";
+    const safeDescription = reminder.description ?? "";
+    const safeClientName = reminder.clientName ?? "";
 
     const ics = [
       "BEGIN:VCALENDAR",
@@ -65,11 +60,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       `DTSTAMP:${dtstamp}`,
       `DTSTART:${dtstart}`,
       `DTEND:${dtend}`,
-      `SUMMARY:${escapeICSText(reminder.title)}`,
-      `DESCRIPTION:${escapeICSText(
-        `${reminder.description || ""}\nClient: ${reminder.clientName}`
-      )}`,
-      `LOCATION:${escapeICSText(reminder.clientName)}`,
+      `SUMMARY:${escapeICSText(safeTitle)}`,
+      `DESCRIPTION:${escapeICSText(`${safeDescription}\nClient: ${safeClientName}`)}`,
+      `LOCATION:${escapeICSText(safeClientName)}`,
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");

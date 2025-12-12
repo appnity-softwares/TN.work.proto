@@ -22,7 +22,18 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { formatISTTime, newDateInIndiaTime } from "@/lib/time";
+import { formatISTTime } from "@/lib/time";
+
+/**
+ * Returns a Date object representing "now" in India Standard Time (UTC+5:30).
+ * This is computed from the local machine time and works reliably in the browser.
+ */
+function getIndiaNow(): Date {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const istOffsetMs = 5.5 * 60 * 60 * 1000; // 5.5 hours in ms
+  return new Date(utc + istOffsetMs);
+}
 
 function safeFormat(date: any) {
   const d = new Date(date);
@@ -59,8 +70,8 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"today" | "date">("today");
   const [view, setView] = useState<"table" | "timeline">("table");
-  const [selectedDate, setSelectedDate] = useState<Date | null>(newDateInIndiaTime());
-  const [currentMonth, setCurrentMonth] = useState(newDateInIndiaTime());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(getIndiaNow());
+  const [currentMonth, setCurrentMonth] = useState(getIndiaNow());
   const [presentDays, setPresentDays] = useState<string[]>([]);
 
   const fetchMonthlyData = async (month: Date) => {
@@ -129,7 +140,7 @@ export default function AttendancePage() {
           <button
             onClick={() => {
               setFilter("today");
-              setSelectedDate(newDateInIndiaTime());
+              setSelectedDate(getIndiaNow());
             }}
             className={`px-4 py-2 rounded ${
               filter === "today"
@@ -161,7 +172,7 @@ export default function AttendancePage() {
             <PopoverContent align="start" className="p-0">
               <Calendar
                 mode="single"
-                selected={selectedDate ?? newDateInIndiaTime()}
+                selected={selectedDate ?? getIndiaNow()}
                 onSelect={(date) => {
                   if (!date) return;
                   setSelectedDate(date);
@@ -172,8 +183,9 @@ export default function AttendancePage() {
                   present: (day) => presentDaysSet.has(format(day, 'yyyy-MM-dd')),
                   absent: (day) => {
                     const month = startOfMonth(currentMonth);
-                    if (day < month || day > newDateInIndiaTime()) return false; // Only for current month
-                    if (isSameDay(day, newDateInIndiaTime())) return false; // Today is not absent yet
+                    const nowInIndia = getIndiaNow();
+                    if (day < month || day > nowInIndia) return false; // Only for current month
+                    if (isSameDay(day, nowInIndia)) return false; // Today is not absent yet
                     return !presentDaysSet.has(format(day, 'yyyy-MM-dd'));
                   }
                 }}

@@ -68,7 +68,6 @@ export function BinManagement({ initialBinItems }: BinManagementProps) {
       fetchBinItems(selectedDate);
     }
     fetchUpcomingItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const handleCreateItem = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -137,7 +136,7 @@ export function BinManagement({ initialBinItems }: BinManagementProps) {
     }
   };
 
-  const getIcon = (type: string) => {
+  const getIcon = (type: string | null) => {
     switch (type) {
       case 'NOTE': return <StickyNote className="h-5 w-5" />;
       case 'TODO': return <ListTodo className="h-5 w-5" />;
@@ -146,165 +145,152 @@ export function BinManagement({ initialBinItems }: BinManagementProps) {
     }
   };
 
+  const safeDate = (item: Bin) =>
+    item.date ? new Date(item.date) : new Date(item.createdAt);
+
   return (
     <div className="space-y-6">
-        <Card className="shadow-sm border border-border/60">
-          <CardHeader>
-            <CardTitle className="font-headline flex items-center gap-2 text-base">
-              <PlusCircle className="h-5 w-5" /> Add to Bin
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={handleCreateItem}>
-              <div>
-                <Textarea
-                  id="content"
-                  name="content"
-                  placeholder="Quick note, to-do, or idea..."
-                  required
-                  disabled={isSubmitting}
-                  className="min-h-[80px]"
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Select name="type" defaultValue="NOTE" disabled={isSubmitting}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NOTE">Note</SelectItem>
-                    <SelectItem value="TODO">To-Do</SelectItem>
-                    <SelectItem value="IDEA">Idea</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant={"outline"}
-                      className="w-full justify-start text-left font-normal"
-                      disabled={isSubmitting}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Save to Bin'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border border-border/60">
-          <CardHeader>
-            <CardTitle className="font-headline text-base flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
-              Bin Calendar
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2 flex justify-center">
-            <Calendar
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              className="rounded-md"
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border border-border/60">
-          <CardHeader>
-            <CardTitle className="font-headline text-base flex items-center gap-2">
-              Upcoming Bin Entries
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {upcomingItems.map((item) => (
-                <Card key={item.id} className="border border-border/50">
-                  <CardContent className="p-4 flex justify-between items-start">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2 bg-muted rounded-full">
-                        {getIcon(item.type)}
-                      </div>
-                      <div>
-                        <p className="text-sm text-foreground">{item.content}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {format(
-                            new Date((item as any).date || (item as any).createdAt),
-                            'MMM d, yyyy'
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {upcomingItems.length === 0 && (
-                <div className="text-center py-5">
-                  <p className="text-muted-foreground text-sm">
-                    No upcoming items.
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
+      
+      {/* Add Item */}
       <Card className="shadow-sm border border-border/60">
-          <CardHeader>
-            <CardTitle className="font-headline text-base">
-              Entries for {selectedDate ? format(selectedDate, 'PPP') : 'today'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {binItems.map((item) => (
-                <Card key={item.id} className="border border-border/50">
-                  <CardContent className="p-4 flex justify-between items-start">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2 bg-muted rounded-full">
-                        {getIcon(item.type)}
-                      </div>
-                      <div>
-                        <p className="text-sm text-foreground">{item.content}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {format(
-                            new Date((item as any).date || (item as any).createdAt),
-                            'MMM d, yyyy'
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      <Trash className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-              {binItems.length === 0 && (
-                <div className="text-center py-10">
-                  <p className="text-muted-foreground text-sm">
-                    No entries for this date. Add a note, to-do, or idea to get started.
-                  </p>
-                </div>
-              )}
+        <CardHeader>
+          <CardTitle className="font-headline flex items-center gap-2 text-base">
+            <PlusCircle className="h-5 w-5" /> Add to Bin
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleCreateItem}>
+            <Textarea
+              id="content"
+              name="content"
+              placeholder="Quick note, to-do, or idea..."
+              required
+              disabled={isSubmitting}
+              className="min-h-[80px]"
+            />
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select name="type" defaultValue="NOTE" disabled={isSubmitting}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NOTE">Note</SelectItem>
+                  <SelectItem value="TODO">To-Do</SelectItem>
+                  <SelectItem value="IDEA">Idea</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                    disabled={isSubmitting}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, 'PPP') : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar selected={date} onSelect={setDate} initialFocus />
+                </PopoverContent>
+              </Popover>
             </div>
-          </CardContent>
-        </Card>
+
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Save to Bin'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Calendar */}
+      <Card className="shadow-sm border border-border/60">
+        <CardHeader>
+          <CardTitle className="font-headline text-base flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" /> Bin Calendar
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 flex justify-center">
+          <Calendar selected={selectedDate} onSelect={setSelectedDate} className="rounded-md" />
+        </CardContent>
+      </Card>
+
+      {/* Upcoming */}
+      <Card className="shadow-sm border border-border/60">
+        <CardHeader>
+          <CardTitle className="font-headline text-base flex items-center gap-2">
+            Upcoming Bin Entries
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {upcomingItems.map((item) => (
+              <Card key={item.id} className="border border-border/50">
+                <CardContent className="p-4 flex justify-between items-start">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-muted rounded-full">{getIcon(item.type)}</div>
+                    <div>
+                      <p className="text-sm text-foreground">{item.content}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {format(safeDate(item), 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {upcomingItems.length === 0 && (
+              <div className="text-center py-5">
+                <p className="text-muted-foreground text-sm">No upcoming items.</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* List for selected date */}
+      <Card className="shadow-sm border border-border/60">
+        <CardHeader>
+          <CardTitle className="font-headline text-base">
+            Entries for {selectedDate ? format(selectedDate, 'PPP') : 'today'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {binItems.map((item) => (
+              <Card key={item.id} className="border border-border/50">
+                <CardContent className="p-4 flex justify-between items-start">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-muted rounded-full">{getIcon(item.type)}</div>
+                    <div>
+                      <p className="text-sm text-foreground">{item.content}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {format(safeDate(item), 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                    <Trash className="h-4 w-4 text-destructive" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+
+            {binItems.length === 0 && (
+              <div className="text-center py-10">
+                <p className="text-muted-foreground text-sm">
+                  No entries for this date. Add a note, to-do, or idea to get started.
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

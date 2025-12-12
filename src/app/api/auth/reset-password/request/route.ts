@@ -27,11 +27,12 @@ export async function POST(req: Request) {
     });
 
     const link = `${getBaseUrl()}/reset-password/${token}`;
+    const safeName = user.name ?? "User";
 
     await sendEmail({
       to: user.email,
       subject: "Reset Your Password",
-      html: resetPasswordEmail({ name: user.name, link }),
+      html: resetPasswordEmail({ name: safeName, link }),
     });
 
     return NextResponse.json({

@@ -34,22 +34,23 @@ export async function createNotice({
     }
   });
 
-  if (notify && targetUserId) {
-    const user = await db.user.findUnique({ where: { id: targetUserId } });
+if (notify && targetUserId) {
+  const user = await db.user.findUnique({ where: { id: targetUserId } });
 
-    if (user?.email) {
-      await sendNoticeToEmployee({
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email
-        },
-        title,
-        message,
-        adminName: "Admin"
-      });
-    }
+  if (user?.email) {
+    await sendNoticeToEmployee({
+      user: {
+        id: user.id,
+        name: user.name ?? "Employee",  // <-- FIXED
+        email: user.email ?? ""         // <-- ensure string
+      },
+      title,
+      message,
+      adminName: "Admin"
+    });
   }
+}
+
 
   return { success: true };
 }

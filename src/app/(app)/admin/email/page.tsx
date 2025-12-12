@@ -13,7 +13,9 @@ export default async function AdminEmailPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold">Send Email</h1>
-      <p className="text-muted-foreground">Compose and send emails to employees, admins or everyone.</p>
+      <p className="text-muted-foreground">
+        Compose and send emails to employees, admins or everyone.
+      </p>
 
       <div className="mt-6 max-w-3xl">
         <Card>
@@ -22,7 +24,6 @@ export default async function AdminEmailPage() {
           </CardHeader>
           <CardContent>
             {/* Client component */}
-            {/* @ts-expect-error Server -> Client */}
             <SendEmailForm />
           </CardContent>
         </Card>

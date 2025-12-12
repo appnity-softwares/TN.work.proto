@@ -35,7 +35,7 @@ export async function requestPasswordReset(userId: string) {
   await sendEmail({
     to: user.email,
     subject: "Reset your TaskNity password",
-    html: resetPasswordEmail({ name: user.name, link }),
+    html: resetPasswordEmail({ name: user.name || "User", link }),
   });
 
   return { success: true, message: "Password reset link sent" };
@@ -70,14 +70,13 @@ export async function suspendUser(userId: string, reason = "Suspended by admin")
     await sendEmail({
       to: user.email,
       subject: "Your TaskNity Account Is Suspended",
-      html: suspensionEmail({ name: user.name, reason }),
+      html: suspensionEmail({ name: user.name || "User", reason }),
     });
   }
 
   revalidatePath("/admin/employees");
   return { success: true, message: "User suspended" };
 }
-
 /* --------------------------------
    UNSUSPEND USER
 ----------------------------------*/
@@ -103,11 +102,14 @@ export async function unsuspendUser(userId: string) {
     },
   });
 
+  // FIX → ensure name is always a string
+  const safeName = user.name ?? "User";
+
   if (user.email) {
     await sendEmail({
       to: user.email,
       subject: "Welcome Back to TaskNity",
-      html: unsuspendEmail({ name: user.name }),
+      html: unsuspendEmail({ name: safeName }),
     });
   }
 

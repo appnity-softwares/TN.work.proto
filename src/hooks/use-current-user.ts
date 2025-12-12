@@ -1,8 +1,25 @@
-'use client';
+"use client";
 
-import { useSession } from 'next-auth/react';
+import { useEffect, useState } from "react";
 
-export const useCurrentUser = () => {
-  const session = useSession();
-  return session.data?.user;
-};
+export function useCurrentUser() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/session"); // <-- your custom endpoint
+        if (!res.ok) return;
+
+        const data = await res.json();
+        setUser(data.user || null);
+      } catch (err) {
+        console.error("Failed to load current user:", err);
+      }
+    }
+
+    load();
+  }, []);
+
+  return user;
+}
