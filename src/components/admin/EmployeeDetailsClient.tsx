@@ -57,7 +57,7 @@ interface EmployeeProps {
 }
 
 export default function EmployeeDetailsClient(props: EmployeeProps) {
-  const { employee, mobileNumber, documents, leave, stats, lists = { attendance: [], workLogs: [], noticesIssued: [], reminders: [] } } = props;
+  const { employee, mobileNumber, documents, leave, stats = { totalAttendanceRecords: 0, totalWorkLogs: 0, lastClockIn: null }, lists = { attendance: [], workLogs: [], noticesIssued: [], reminders: [] } } = props;
 
   const [activeTab, setActiveTab] = useState<"overview" | "activity" | "documents" | "leave" | "graphs">("overview");
   const [openMessage, setOpenMessage] = useState(false);

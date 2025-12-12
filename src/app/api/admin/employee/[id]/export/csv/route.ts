@@ -17,47 +17,64 @@ export async function GET(
 
   const user = await prisma.user.findUnique({
     where: { id: employeeId },
-    include: { attendance: true, workLogs: true },
+    include: {
+      attendance: {
+        select: {
+          id: true,
+          checkIn: true,
+          checkOut: true,
+        }
+      },
+      workLogs: {
+        select: {
+          id: true,
+          date: true,
+          description: true,
+        }
+      }
+    }
   });
 
   if (!user) {
     return Response.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  // Basic profile fields
-  const profileData = {
-    name: user.name,
-    email: user.email,
-    employeeCode: user.employeeCode,
-    role: user.role,
-    status: user.status,
-    joinDate: user.joinDate.toISOString(),
-  };
+  // Basic profile data
+  const profileData = [{
+    name: user.name ?? "",
+    employeeCode: user.employeeCode ?? "",
+    role: user.role ?? "",
+    status: user.status ?? "",
+    joinDate: user.joinDate ? user.joinDate.toISOString() : "",
+  }];
 
-  // Flatten attendance records
-  const attendanceData = user.attendance.map(record => ({
-    checkIn: record.checkIn.toISOString(),
-    checkOut: record.checkOut?.toISOString() || "",
+  // Attendance CSV ready format
+  const attendanceData = user.attendance.map((record) => ({
+    id: record.id,
+    checkIn: record.checkIn ? record.checkIn.toISOString() : "",
+    checkOut: record.checkOut ? record.checkOut.toISOString() : "",
   }));
 
-  // Flatten work logs
-  const workLogsData = user.workLogs.map(log => ({
-    date: log.date.toISOString(),
-    description: log.description,
+  // Work Logs CSV ready format
+  const workLogsData = user.workLogs.map((log) => ({
+    id: log.id,
+    date: log.date ? log.date.toISOString() : "",
+    description: log.description ?? "",
   }));
 
-  const json2csvParser = new Parser();
-  const profileCsv = json2csvParser.parse(profileData);
-  const attendanceCsv = json2csvParser.parse(attendanceData);
-  const workLogsCsv = json2csvParser.parse(workLogsData);
+  const parser = new Parser();
 
-  const csv = `Profile\n${profileCsv}\n\nAttendance\n${attendanceCsv}\n\nWork Logs\n${workLogsCsv}`;
+  const profileCsv = parser.parse(profileData);
+  const attendanceCsv = parser.parse(attendanceData);
+  const workLogsCsv = parser.parse(workLogsData);
 
-  return new Response(csv, {
+  const final = `Profile\n${profileCsv}\n\nAttendance\n${attendanceCsv}\n\nWork Logs\n${workLogsCsv}`;
+
+  return new Response(final, {
     status: 200,
     headers: {
       "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename=${user.employeeCode}_profile.csv`,
+      "Content-Disposition": `attachment; filename=${user.employeeCode || "employee"}_export.csv`,
     },
   });
 }
