@@ -1,25 +1,37 @@
 import { db as prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 
-export async function GET() {
+interface Params {
+  params: { id: string };
+}
+
+export async function GET(req: Request, { params }: Params) {
   const session = await getSession();
 
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const employees = await prisma.user.findMany({
-    where: { role: "EMPLOYEE" },
-    select: {
-      id: true,
-      name: true,
-      employeeCode: true,
-      status: true,
-    },
-    orderBy: {
-      name: "asc",
+  const user = await prisma.user.findUnique({
+    where: { id: params.id },
+    include: {
+      attendance: {
+        orderBy: { checkIn: "desc" }, // Use 'checkIn' if 'date' does not exist
+        take: 50,
+      },
+      workLogs: {
+        orderBy: { id: "desc" },
+        take: 50,
+      },
+      projects: true,
+      noticesIssued: true,
+      logs: true,
     },
   });
 
-  return Response.json({ employees });
+  if (!user) {
+    return Response.json({ error: "User not found" }, { status: 404 });
+  }
+
+  return Response.json({ user });
 }
