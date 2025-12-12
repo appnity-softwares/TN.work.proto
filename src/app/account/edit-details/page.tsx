@@ -1,7 +1,7 @@
 'use client';
 
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,14 @@ import { AlertTriangle } from 'lucide-react';
 import { updateUserProfile } from '@/app/api/update-user-details';
 
 export default function EditDetailsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+      <EditDetailsContent />
+    </Suspense>
+  );
+}
+
+function EditDetailsContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const { toast } = useToast();
