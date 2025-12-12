@@ -8,11 +8,11 @@ async function getClient(id: string) {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("tn_proto_session")?.value;
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-    ? process.env.NEXT_PUBLIC_BASE_URL
-    : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000";
+  // Improved baseUrl logic
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+  console.log("🌐 Base URL:", baseUrl); // Debugging log
 
   const res = await fetch(`${baseUrl}/api/admin/clients/${id}`, {
     cache: "no-store",
