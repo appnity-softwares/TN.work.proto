@@ -5,14 +5,14 @@ import { getSession } from "@/lib/session";
 
 // GET /api/admin/employee/[id] - Get full employee profile for admin/superadmin
 export async function GET(req: Request, ctx: { params: { id: string } } | Promise<{ params: { id: string } }>) {
+  const { params } = await Promise.resolve(ctx);
+  const { id } = params;
+
   const session = await getSession();
   if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Support both sync and async ctx for Next.js dynamic API routes
-  const { params } = await Promise.resolve(ctx);
-  const { id } = params;
   try {
     const employee = await db.user.findUnique({
       where: { id },
